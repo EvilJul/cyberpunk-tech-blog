@@ -1,5 +1,0 @@
-npm warn config production Use `--omit=dev` instead.
-npm warn audit 404 Not Found - POST https://registry.npmmirror.com/-/npm/v1/security/audits/quick - [NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet
-{ error: '[NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet' }
-npm error audit endpoint returned an error
-npm error A complete log of this run can be found in: /Users/tian/.npm/_logs/2026-06-20T10_29_42_533Z-debug-0.log

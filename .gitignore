@@ -21,6 +21,11 @@ server/data/*.db-journal
 server/data/*.db-wal
 server/data/*.db-shm
 
+# User data (uploads, settings, backups)
+server/data/uploads/
+server/data/*.json
+server/data/*.bak.*
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -40,3 +45,18 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Test files
+test-results/
+test-results.json
+test-screenshot*.png
+test-api.sh
+test-frontend.js
+run-all-tests.sh
+
+# Report files
+*_REPORT.md
+QUICKSTART.md
+
+# Plugins (if not core)
+plugins/

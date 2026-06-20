@@ -1,0 +1,19 @@
+{
+  "articles": [
+    {
+      "id": "article-001",
+      "title": "欢迎来到我的技术博客",
+      "slug": "welcome-to-my-tech-blog",
+      "content": "# 欢迎\n\n这是我的第一篇技术博客文章。\n\n## 为什么写博客\n\n记录学习过程，分享技术经验。",
+      "excerpt": "这是我的第一篇技术博客文章，记录学习过程，分享技术经验。",
+      "category": "技术分享",
+      "tags": ["博客", "技术", "入门"],
+      "author": "博主",
+      "publishDate": "2026-06-18",
+      "updateDate": "2026-06-18",
+      "status": "published",
+      "views": 0,
+      "likes": 0
+    }
+  ]
+}

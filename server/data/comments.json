@@ -1,0 +1,34 @@
+{
+  "comments": [
+    {
+      "id": "comment-1781748643911",
+      "articleId": "article-001",
+      "parentId": null,
+      "author": "123",
+      "email": "123@test.com",
+      "content": "123",
+      "createdAt": "2026-06-18T02:10:43.911Z",
+      "status": "pending"
+    },
+    {
+      "id": "comment-1781772230758",
+      "articleId": "article-001",
+      "parentId": null,
+      "author": "测试用户",
+      "email": "test@test.com",
+      "content": "测试评论内容",
+      "createdAt": "2026-06-18T08:43:50.758Z",
+      "status": "pending"
+    },
+    {
+      "id": "comment-1781791602585",
+      "articleId": "article-001",
+      "parentId": null,
+      "author": "测试用户",
+      "email": "test@test.com",
+      "content": "这是一条测试评论",
+      "createdAt": "2026-06-18T14:06:42.585Z",
+      "status": "pending"
+    }
+  ]
+}

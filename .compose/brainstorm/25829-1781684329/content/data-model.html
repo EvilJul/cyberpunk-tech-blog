@@ -1,0 +1,82 @@
+<h2>数据模型设计</h2>
+<p class="subtitle">JSON文件存储结构</p>
+
+<div class="mockup">
+  <div class="mockup-header">数据文件布局</div>
+  <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 14px;">
+    <div style="color: #ffd700; font-weight: bold;">项目根/</div>
+    <div style="margin-left: 20px; color: #888;">├── src/data/ ← 源码模板（Git跟踪）</div>
+    <div style="margin-left: 40px; color: #888;">├── articles.json ← 文章初始模板</div>
+    <div style="margin-left: 40px; color: #888;">└── comments.json ← 评论初始模板</div>
+    
+    <div style="margin-left: 20px; margin-top: 10px; color: #888;">└── server/data/ ← 持久化目录（不跟踪，部署不覆盖）</div>
+    <div style="margin-left: 40px; color: #888;">├── articles.json ← 用户实际编辑的文章</div>
+    <div style="margin-left: 40px; color: #888;">├── comments.json ← 用户实际编辑的评论</div>
+    <div style="margin-left: 40px; color: #888;">├── config.json ← 站点配置</div>
+    <div style="margin-left: 40px; color: #888;">└── uploads/ ← 用户上传的图片</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>articles.json 模型</h3>
+  <div style="background: #1a1a2e; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #888; margin-top: 10px;">
+    <div style="color: #ffd700;">{</div>
+    <div style="margin-left: 20px;">"articles": [{</div>
+    <div style="margin-left: 40px;">"id": "article-001",</div>
+    <div style="margin-left: 40px;">"title": "文章标题",</div>
+    <div style="margin-left: 40px;">"slug": "article-slug",</div>
+    <div style="margin-left: 40px;">"content": "文章内容（Markdown格式）",</div>
+    <div style="margin-left: 40px;">"excerpt": "文章摘要",</div>
+    <div style="margin-left: 40px;">"category": "技术分类",</div>
+    <div style="margin-left: 40px;">"tags": ["标签1", "标签2"],</div>
+    <div style="margin-left: 40px;">"author": "作者名",</div>
+    <div style="margin-left: 40px;">"publishDate": "2024-01-01",</div>
+    <div style="margin-left: 40px;">"updateDate": "2024-01-01",</div>
+    <div style="margin-left: 40px;">"status": "published",</div>
+    <div style="margin-left: 40px;">"views": 0,</div>
+    <div style="margin-left: 40px;">"likes": 0</div>
+    <div style="margin-left: 20px;">}]</div>
+    <div style="color: #ffd700;">}</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>comments.json 模型</h3>
+  <div style="background: #1a1a2e; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #888; margin-top: 10px;">
+    <div style="color: #ffd700;">{</div>
+    <div style="margin-left: 20px;">"comments": [{</div>
+    <div style="margin-left: 40px;">"id": "comment-001",</div>
+    <div style="margin-left: 40px;">"articleId": "article-001",</div>
+    <div style="margin-left: 40px;">"parentId": null,</div>
+    <div style="margin-left: 40px;">"author": "评论者",</div>
+    <div style="margin-left: 40px;">"email": "email@example.com",</div>
+    <div style="margin-left: 40px;">"content": "评论内容",</div>
+    <div style="margin-left: 40px;">"createdAt": "2024-01-01T10:00:00Z",</div>
+    <div style="margin-left: 40px;">"status": "approved"</div>
+    <div style="margin-left: 20px;">}]</div>
+    <div style="color: #ffd700;">}</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>部署时的数据策略</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">首次运行</div>
+      <div style="color: #888; font-size: 12px;">
+        • 自动从 src/data/ 迁移到 shared/data<br>
+        • 创建初始数据文件<br>
+        • 设置符号链接
+      </div>
+    </div>
+    
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">后续部署</div>
+      <div style="color: #888; font-size: 12px;">
+        • 直接符号链接共享目录<br>
+        • 数据零丢失<br>
+        • 自动备份机制
+      </div>
+    </div>
+  </div>
+</div>

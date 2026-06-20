@@ -1,0 +1,79 @@
+<h2>整体架构设计</h2>
+<p class="subtitle">基于现有简历网站改造为技术博客网站</p>
+
+<div class="mockup">
+  <div class="mockup-header">系统架构图</div>
+  <div class="mockup-body" style="padding: 20px;">
+    <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
+      <div style="color: #ffd700; font-weight: bold;">用户浏览器</div>
+      <div style="color: #888;">https://example.com/blog/</div>
+      <div style="margin: 10px 0;">↓</div>
+      
+      <div style="display: flex; gap: 20px;">
+        <div style="flex: 1; border: 1px solid #ffd700; padding: 10px; border-radius: 4px;">
+          <div style="color: #ffd700; font-weight: bold;">Nginx (80/443)</div>
+          <div style="color: #888;">/blog/ → :9098</div>
+        </div>
+        
+        <div style="flex: 1; border: 1px solid #ffd700; padding: 10px; border-radius: 4px;">
+          <div style="color: #ffd700; font-weight: bold;">SSH隧道 (管理)</div>
+          <div style="color: #888;">-L 3033:127.0.0.1:3033</div>
+        </div>
+      </div>
+      
+      <div style="margin: 15px 0;">↓</div>
+      
+      <div style="border: 2px solid #ffd700; padding: 15px; border-radius: 8px; background: rgba(255,215,0,0.05);">
+        <div style="color: #ffd700; font-weight: bold; font-size: 16px;">Express Server (Node.js)</div>
+        
+        <div style="display: flex; gap: 15px; margin-top: 15px;">
+          <div style="flex: 1; border: 1px solid #666; padding: 10px; border-radius: 4px;">
+            <div style="color: #ffd700; font-weight: bold;">公开端口 :9098</div>
+            <div style="color: #888; font-size: 12px;">• 博客SPA</div>
+            <div style="color: #888; font-size: 12px;">• 文章API (只读)</div>
+            <div style="color: #888; font-size: 12px;">• 搜索API</div>
+            <div style="color: #888; font-size: 12px;">• 评论API</div>
+          </div>
+          
+          <div style="flex: 1; border: 1px solid #666; padding: 10px; border-radius: 4px;">
+            <div style="color: #ffd700; font-weight: bold;">管理端口 :3033</div>
+            <div style="color: #888; font-size: 12px;">• 管理后台SPA</div>
+            <div style="color: #888; font-size: 12px;">• 文章管理API</div>
+            <div style="color: #888; font-size: 12px;">• 评论管理API</div>
+            <div style="color: #888; font-size: 12px;">• 图片上传API</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 15px; border-top: 1px solid #666; padding-top: 15px;">
+          <div style="color: #ffd700; font-weight: bold;">数据持久层</div>
+          <div style="color: #888; font-size: 12px;">• articles.json (文章数据)</div>
+          <div style="color: #888; font-size: 12px;">• comments.json (评论数据)</div>
+          <div style="color: #888; font-size: 12px;">• config.json (配置)</div>
+          <div style="color: #888; font-size: 12px;">• uploads/ (图片)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>核心设计决策</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+    <div style="padding: 10px; border: 1px solid #333; border-radius: 4px;">
+      <div style="color: #ffd700; font-weight: bold;">双端口架构</div>
+      <div style="color: #888; font-size: 12px;">物理隔离公开/管理API，无需认证中间件</div>
+    </div>
+    <div style="padding: 10px; border: 1px solid #333; border-radius: 4px;">
+      <div style="color: #ffd700; font-weight: bold;">SPA无路由</div>
+      <div style="color: #888; font-size: 12px;">博客场景无需路由，单页滚动体验更好</div>
+    </div>
+    <div style="padding: 10px; border: 1px solid #333; border-radius: 4px;">
+      <div style="color: #ffd700; font-weight: bold;">JSON文件存储</div>
+      <div style="color: #888; font-size: 12px;">简单文件存储，适合个人博客</div>
+    </div>
+    <div style="padding: 10px; border: 1px solid #333; border-radius: 4px;">
+      <div style="color: #ffd700; font-weight: bold;">暗金赛博朋克主题</div>
+      <div style="color: #888; font-size: 12px;">深邃黑背景 + 金属金色点缀</div>
+    </div>
+  </div>
+</div>

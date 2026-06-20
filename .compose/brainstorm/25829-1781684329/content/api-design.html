@@ -1,0 +1,139 @@
+<h2>API接口设计</h2>
+<p class="subtitle">公开API和管理API设计</p>
+
+<div class="mockup">
+  <div class="mockup-header">公开API (端口9098)</div>
+  <div class="mockup-body" style="padding: 20px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="border-bottom: 1px solid #333;">
+          <th style="text-align: left; color: #ffd700; padding: 8px;">方法</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">路径</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">功能</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">响应</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/health</td>
+          <td style="color: #888; padding: 8px;">健康检查</td>
+          <td style="color: #888; padding: 8px;">{ status: "ok", timestamp }</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/articles</td>
+          <td style="color: #888; padding: 8px;">获取文章列表</td>
+          <td style="color: #888; padding: 8px;">文章数组（分页、筛选）</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/articles/:slug</td>
+          <td style="color: #888; padding: 8px;">获取文章详情</td>
+          <td style="color: #888; padding: 8px;">完整文章对象</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/search</td>
+          <td style="color: #888; padding: 8px;">搜索文章</td>
+          <td style="color: #888; padding: 8px;">搜索结果数组</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/articles/:id/comments</td>
+          <td style="color: #888; padding: 8px;">获取文章评论</td>
+          <td style="color: #888; padding: 8px;">评论数组</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">POST</td>
+          <td style="color: #888; padding: 8px;">/api/articles/:id/comments</td>
+          <td style="color: #888; padding: 8px;">提交评论</td>
+          <td style="color: #888; padding: 8px;">新评论对象</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top: 20px;">
+  <div class="mockup-header">管理API (端口3033)</div>
+  <div class="mockup-body" style="padding: 20px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="border-bottom: 1px solid #333;">
+          <th style="text-align: left; color: #ffd700; padding: 8px;">方法</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">路径</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">功能</th>
+          <th style="text-align: left; color: #ffd700; padding: 8px;">备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/articles</td>
+          <td style="color: #888; padding: 8px;">读取文章</td>
+          <td style="color: #888; padding: 8px;">用于编辑</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">POST</td>
+          <td style="color: #888; padding: 8px;">/api/articles</td>
+          <td style="color: #888; padding: 8px;">创建文章</td>
+          <td style="color: #888; padding: 8px;">自动生成ID</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">PUT</td>
+          <td style="color: #888; padding: 8px;">/api/articles/:id</td>
+          <td style="color: #888; padding: 8px;">更新文章</td>
+          <td style="color: #888; padding: 8px;">自动备份</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">DELETE</td>
+          <td style="color: #888; padding: 8px;">/api/articles/:id</td>
+          <td style="color: #888; padding: 8px;">删除文章</td>
+          <td style="color: #888; padding: 8px;">软删除</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">POST</td>
+          <td style="color: #888; padding: 8px;">/api/upload</td>
+          <td style="color: #888; padding: 8px;">上传图片</td>
+          <td style="color: #888; padding: 8px;">multipart/form-data</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">GET</td>
+          <td style="color: #888; padding: 8px;">/api/comments</td>
+          <td style="color: #888; padding: 8px;">管理评论</td>
+          <td style="color: #888; padding: 8px;">审核、删除</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="color: #888; padding: 8px;">PUT</td>
+          <td style="color: #888; padding: 8px;">/api/comments/:id</td>
+          <td style="color: #888; padding: 8px;">更新评论状态</td>
+          <td style="color: #888; padding: 8px;">批准/拒绝</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>认证机制</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">管理后台认证</div>
+      <div style="color: #888; font-size: 12px;">
+        • 密码认证（环境变量配置）<br>
+        • localStorage会话存储<br>
+        • SSH隧道物理隔离
+      </div>
+    </div>
+    
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">评论防护</div>
+      <div style="color: #888; font-size: 12px;">
+        • 评论需审核后显示<br>
+        • 防spam基础验证<br>
+        • 速率限制
+      </div>
+    </div>
+  </div>
+</div>

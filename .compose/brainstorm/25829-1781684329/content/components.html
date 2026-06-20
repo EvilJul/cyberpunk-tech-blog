@@ -1,0 +1,85 @@
+<h2>前端组件设计</h2>
+<p class="subtitle">基于React + Tailwind CSS的博客组件体系</p>
+
+<div class="mockup">
+  <div class="mockup-header">组件树</div>
+  <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 14px;">
+    <div style="color: #ffd700; font-weight: bold;">&lt;App&gt;</div>
+    <div style="margin-left: 20px; color: #888;">← src/App.jsx，单页无路由</div>
+    
+    <div style="margin-left: 20px; margin-top: 10px;">
+      <div style="color: #ffd700;">├─ [背景层] (fixed, z-0~2)</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;PixelSnow /&gt; WebGL像素雪花粒子</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;SideRays /&gt; WebGL角落光线</div>
+      <div style="margin-left: 40px; color: #888;">└─ &lt;div.grid-bg /&gt; CSS网格叠加</div>
+    </div>
+    
+    <div style="margin-left: 20px; margin-top: 10px;">
+      <div style="color: #ffd700;">├─ [交互层] (fixed, z-50)</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;SplashCursor /&gt; WebGL流体墨水飞溅</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;Header /&gt; 毛玻璃导航栏</div>
+      <div style="margin-left: 40px; color: #888;">└─ &lt;SearchBar /&gt; 搜索组件</div>
+    </div>
+    
+    <div style="margin-left: 20px; margin-top: 10px;">
+      <div style="color: #ffd700;">├─ [主内容] (relative, z-10)</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;Hero /&gt; 博客标题区域</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;ArticleList /&gt; 文章列表</div>
+      <div style="margin-left: 40px; color: #888;">│   ├─ &lt;ArticleCard /&gt; 文章卡片</div>
+      <div style="margin-left: 40px; color: #888;">│   └─ &lt;TagFilter /&gt; 标签筛选</div>
+      <div style="margin-left: 40px; color: #888;">├─ &lt;ArticleDetail /&gt; 文章详情</div>
+      <div style="margin-left: 40px; color: #888;">│   ├─ &lt;CodeBlock /&gt; 代码高亮</div>
+      <div style="margin-left: 40px; color: #888;">│   └─ &lt;CommentSection /&gt; 评论区</div>
+      <div style="margin-left: 40px; color: #888;">└─ &lt;Footer /&gt; 页脚</div>
+    </div>
+    
+    <div style="margin-left: 20px; margin-top: 10px;">
+      <div style="color: #ffd700;">└─ [管理后台] (独立页面)</div>
+      <div style="margin-left: 40px; color: #888;">└─ &lt;AdminPanel /&gt; 管理后台</div>
+      <div style="margin-left: 40px; color: #888;">    ├─ &lt;ArticleEditor /&gt; 文章编辑器</div>
+      <div style="margin-left: 40px; color: #888;">    ├─ &lt;CommentManager /&gt; 评论管理</div>
+      <div style="margin-left: 40px; color: #888;">    └─ &lt;MediaUpload /&gt; 图片上传</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>核心组件详解</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">Header组件</div>
+      <div style="color: #888; font-size: 12px;">
+        • 固定顶栏，滚动50px触发毛玻璃效果<br>
+        • 包含：Logo、导航菜单、搜索图标<br>
+        • 响应式：移动端汉堡菜单
+      </div>
+    </div>
+    
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">ArticleCard组件</div>
+      <div style="color: #888; font-size: 12px;">
+        • 文章卡片展示：标题、摘要、标签、日期<br>
+        • 悬停效果：边框发光、轻微上浮<br>
+        • 点击跳转到文章详情
+      </div>
+    </div>
+    
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">CodeBlock组件</div>
+      <div style="color: #888; font-size: 12px;">
+        • 代码高亮：使用highlight.js或Prism<br>
+        • 暗金主题代码样式<br>
+        • 复制按钮、行号显示
+      </div>
+    </div>
+    
+    <div style="border: 1px solid #333; padding: 15px; border-radius: 8px;">
+      <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">CommentSection组件</div>
+      <div style="color: #888; font-size: 12px;">
+        • 评论列表展示<br>
+        • 评论表单：昵称、邮箱、内容<br>
+        • 回复功能、嵌套评论
+      </div>
+    </div>
+  </div>
+</div>

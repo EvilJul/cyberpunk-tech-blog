@@ -15,6 +15,7 @@ export default function SplashCursor() {
     resize()
 
     const particles = []
+    const MAX_PARTICLES = 200
 
     const handleMouseMove = (e) => {
       for (let i = 0; i < 2; i++) {
@@ -26,6 +27,10 @@ export default function SplashCursor() {
           life: 1,
           color: `hsla(${Math.random() * 60 + 30}, 100%, 50%, 0.4)`,
         })
+      }
+
+      while (particles.length > MAX_PARTICLES) {
+        particles.shift()
       }
     }
 

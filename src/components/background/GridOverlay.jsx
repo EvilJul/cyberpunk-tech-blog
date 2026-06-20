@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { useSettings } from '../../contexts/SettingsContext'
 
 function hexToRgb(hex) {
@@ -11,8 +11,11 @@ function hexToRgb(hex) {
 export default function GridOverlay() {
   const canvasRef = useRef(null)
   const { colors } = useSettings()
-  const colorsRef = useRef(colors)
-  colorsRef.current = colors
+  const [cachedRgb, setCachedRgb] = useState(() => hexToRgb(colors.primary))
+
+  useEffect(() => {
+    setCachedRgb(hexToRgb(colors.primary))
+  }, [colors.primary])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -78,16 +81,14 @@ export default function GridOverlay() {
       }
 
       draw() {
-        const c = colorsRef.current
-        const rgb = hexToRgb(c.primary)
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.life * 0.6})`
+        ctx.fillStyle = `rgba(${cachedRgb.r}, ${cachedRgb.g}, ${cachedRgb.b}, ${this.life * 0.6})`
         ctx.fill()
 
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.life * 0.15})`
+        ctx.fillStyle = `rgba(${cachedRgb.r}, ${cachedRgb.g}, ${cachedRgb.b}, ${this.life * 0.15})`
         ctx.fill()
       }
     }
@@ -99,10 +100,7 @@ export default function GridOverlay() {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      const c = colorsRef.current
-      const rgb = hexToRgb(c.primary)
-
-      ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.03)`
+      ctx.strokeStyle = `rgba(${cachedRgb.r}, ${cachedRgb.g}, ${cachedRgb.b}, 0.03)`
       ctx.lineWidth = 1
 
       for (let x = 0; x <= canvas.width; x += gridSize) {

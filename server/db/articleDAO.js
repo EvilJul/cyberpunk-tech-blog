@@ -127,19 +127,24 @@ export class ArticleDAO {
     const orderDir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
 
     const stmt = db.prepare(`
-      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.publish_date, a.update_date, c.name as category
+      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.publish_date, a.update_date, c.name as category,
+             GROUP_CONCAT(t.name, ',') as tags_concat
       FROM articles a
       LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN article_tags at ON a.id = at.article_id
+      LEFT JOIN tags t ON at.tag_id = t.id
       ${whereClause}
+      GROUP BY a.id
       ORDER BY a.${sortField} ${orderDir}
       LIMIT ? OFFSET ?
     `)
 
     const articles = stmt.all(...params, perPage, offset)
 
-    // 为每篇文章添加标签
+    // 处理标签字段
     articles.forEach(article => {
-      article.tags = this.getTags(article.id)
+      article.tags = article.tags_concat ? article.tags_concat.split(',') : []
+      delete article.tags_concat
     })
 
     return {
@@ -164,11 +169,15 @@ export class ArticleDAO {
     // 使用 FTS5 搜索
     const stmt = db.prepare(`
       SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.publish_date, c.name as category,
-             snippet(articles_fts, 1, '<mark>', '</mark>', '...', 30) as highlight
+             snippet(articles_fts, 1, '<mark>', '</mark>', '...', 30) as highlight,
+             GROUP_CONCAT(t.name, ',') as tags_concat
       FROM articles_fts
       JOIN articles a ON articles_fts.rowid = a.rowid
       LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN article_tags at ON a.id = at.article_id
+      LEFT JOIN tags t ON at.tag_id = t.id
       WHERE articles_fts MATCH ?
+      GROUP BY a.id
       ORDER BY rank
       LIMIT ? OFFSET ?
     `)
@@ -181,9 +190,10 @@ export class ArticleDAO {
     `)
     const { count: total } = countStmt.get(query)
 
-    // 添加标签
+    // 处理标签字段
     articles.forEach(article => {
-      article.tags = this.getTags(article.id)
+      article.tags = article.tags_concat ? article.tags_concat.split(',') : []
+      delete article.tags_concat
     })
 
     return {

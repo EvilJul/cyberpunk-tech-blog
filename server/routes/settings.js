@@ -21,6 +21,7 @@ const defaultSettings = {
   color: 'gold',
   sidebar: 'right',
   author: 'Tech Blogger',
+  avatar: '',  // 头像URL
   bio: '探索技术世界，分享编程经验',
   github: '',
   email: ''
@@ -58,8 +59,10 @@ router.get('/', (req, res) => {
 
 // 更新设置
 router.put('/', (req, res) => {
-  const newSettings = { ...defaultSettings, ...req.body }
-  
+  // 读取当前设置，与新设置合并
+  const currentSettings = readSettings()
+  const newSettings = { ...currentSettings, ...req.body }
+
   if (saveSettings(newSettings)) {
     res.json({ success: true, settings: newSettings })
   } else {

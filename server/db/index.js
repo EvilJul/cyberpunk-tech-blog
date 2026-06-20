@@ -145,6 +145,13 @@ export function initDatabase() {
     END;
   `)
 
+  // 添加性能优化索引
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles(created_at);
+    CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
+    CREATE INDEX IF NOT EXISTS idx_comments_article_status ON comments(article_id, status);
+  `)
+
   logger.info('数据库初始化完成')
 }
 

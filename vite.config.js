@@ -11,7 +11,8 @@ export default defineConfig({
   server: {
     port: 9099,
     proxy: {
-      '/api': 'http://localhost:9098'
+      '/api': 'http://localhost:9098',
+      '/uploads': 'http://localhost:9098'
     }
   }
 })

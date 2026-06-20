@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 
 export default function SearchBar({ onSearch }) {
@@ -22,28 +22,28 @@ export default function SearchBar({ onSearch }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [focused])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = useCallback((e) => {
     e.preventDefault()
     if (onSearch) onSearch(query)
-  }
+  }, [query, onSearch])
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     setQuery(e.target.value)
     if (!isComposing.current && onSearch) {
       onSearch(e.target.value)
     }
-  }
+  }, [onSearch])
 
-  const handleCompositionEnd = (e) => {
+  const handleCompositionEnd = useCallback((e) => {
     isComposing.current = false
     if (onSearch) onSearch(e.target.value)
-  }
+  }, [onSearch])
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setQuery('')
     if (onSearch) onSearch('')
     inputRef.current?.focus()
-  }
+  }, [onSearch])
 
   return (
     <form onSubmit={handleSubmit} className="relative mb-6">

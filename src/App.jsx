@@ -58,20 +58,20 @@ function App() {
                 {selectedArticle ? (
                   <ArticleDetail article={selectedArticle} onBack={handleBack} />
                 ) : (
-                  <ArticleList 
-                    onArticleClick={handleArticleClick} 
+                  <ArticleList
+                    onArticleClick={handleArticleClick}
                     perPage={settings.perpage}
                   />
                 )}
               </div>
-              
+
               <div className="w-full lg:w-80 flex-shrink-0">
                 <Sidebar />
               </div>
             </div>
           </div>
         </main>
-        
+
         {settings.footer && <Footer settings={settings} />}
       </div>
     </div>

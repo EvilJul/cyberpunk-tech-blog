@@ -1,5 +1,6 @@
 import express from 'express'
 import { CategoryDAO } from '../db/otherDAO.js'
+import { authMiddleware, adminOnly } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -12,7 +13,7 @@ router.get('/', (req, res, next) => {
   }
 })
 
-router.post('/', (req, res, next) => {
+router.post('/', authMiddleware, adminOnly, (req, res, next) => {
   try {
     const { name, description } = req.body
     if (!name) {
@@ -26,7 +27,7 @@ router.post('/', (req, res, next) => {
   }
 })
 
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', authMiddleware, adminOnly, (req, res, next) => {
   try {
     const success = CategoryDAO.delete(req.params.id)
     if (!success) {

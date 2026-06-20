@@ -1,281 +1,63 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fs from 'fs'
-import multer from 'multer'
-import sharp from 'sharp'
-import { authMiddleware } from './middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const app = express()
 const PORT = process.env.ADMIN_PORT || 3033
+const API_SERVER = process.env.PUBLIC_PORT || 9098
 
 app.use(cors())
 app.use(express.json())
 app.use(express.static(join(__dirname, '..', 'admin')))
 app.use('/uploads', express.static(join(__dirname, 'data', 'uploads')))
 
-app.use('/api', authMiddleware)
+// 代理所有 /api/* 请求到主后端服务器
+app.use('/api', async (req, res) => {
+  const targetUrl = `http://localhost:${API_SERVER}/api${req.url}`
 
-const dataDir = join(__dirname, 'data')
-const settingsFile = join(dataDir, 'settings.json')
-
-const defaultSettings = {
-  title: 'TechBlog',
-  description: '探索技术世界，分享编程经验',
-  grid: true,
-  footer: true,
-  excerpt: 100,
-  perpage: 10,
-  color: 'gold',
-  sidebar: 'right',
-  author: 'Tech Blogger',
-  bio: '探索技术世界，分享编程经验',
-  github: '',
-  email: ''
-}
-
-function readSettings() {
   try {
-    if (fs.existsSync(settingsFile)) {
-      const data = fs.readFileSync(settingsFile, 'utf-8')
-      return { ...defaultSettings, ...JSON.parse(data) }
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''
+      },
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
+    })
+
+    let data = await response.json()
+
+    // 转换数据格式以兼容管理后台
+    if (req.url.startsWith('/articles') && req.method === 'GET') {
+      // 文章列表：{data: [], pagination: {}} -> {articles: []}
+      if (data.data !== undefined) {
+        data = { articles: data.data }
+      }
+    } else if (req.url.startsWith('/categories') && req.method === 'GET' && Array.isArray(data)) {
+      // 分类列表：[] -> {categories: []}
+      data = { categories: data }
+    } else if (req.url.startsWith('/tags') && req.method === 'GET' && Array.isArray(data)) {
+      // 标签列表：[] -> {tags: []}
+      data = { tags: data }
+    } else if (req.url.startsWith('/settings') && data.settings === undefined) {
+      // 设置：如果没有 settings 字段，包装一下
+      data = { settings: data }
     }
+
+    res.status(response.status).json(data)
   } catch (error) {
-    console.error('读取设置失败:', error)
-  }
-  return defaultSettings
-}
-
-function saveSettings(settings) {
-  try {
-    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), 'utf-8')
-    return true
-  } catch (error) {
-    console.error('保存设置失败:', error)
-    return false
-  }
-}
-
-app.get('/api/settings', (req, res) => {
-  const settings = readSettings()
-  res.json({ settings })
-})
-
-app.put('/api/settings', (req, res) => {
-  const newSettings = { ...defaultSettings, ...req.body }
-  if (saveSettings(newSettings)) {
-    res.json({ success: true, settings: newSettings })
-  } else {
-    res.status(500).json({ error: '保存设置失败' })
-  }
-})
-
-app.post('/api/settings/reset', (req, res) => {
-  if (saveSettings(defaultSettings)) {
-    res.json({ success: true, settings: defaultSettings })
-  } else {
-    res.status(500).json({ error: '重置设置失败' })
-  }
-})
-
-const uploadDir = join(__dirname, 'data', 'uploads')
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true })
-}
-
-const storage = multer.memoryStorage()
-const upload = multer({ storage })
-
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: '没有上传文件' })
-    }
-    const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
-    const filepath = join(uploadDir, filename)
-    await sharp(req.file.buffer)
-      .resize(1200, null, { withoutEnlargement: true })
-      .jpeg({ quality: 80 })
-      .toFile(filepath)
-    res.json({ success: true, url: `/uploads/${filename}` })
-  } catch (error) {
-    res.status(500).json({ error: '上传失败' })
-  }
-})
-
-app.get('/api/articles', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'articles.json')
-  try {
-    const data = fs.readFileSync(dataFile, 'utf8')
-    res.json(JSON.parse(data))
-  } catch (error) {
-    res.json({ articles: [] })
-  }
-})
-
-app.post('/api/articles', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'articles.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const newArticle = {
-      id: `article-${Date.now()}`,
-      ...req.body,
-      views: 0,
-      likes: 0,
-      status: 'published'
-    }
-    data.articles.push(newArticle)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.status(201).json(newArticle)
-  } catch (error) {
-    res.status(500).json({ error: '创建失败' })
-  }
-})
-
-app.put('/api/articles/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'articles.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const index = data.articles.findIndex(a => a.id === req.params.id)
-    if (index === -1) {
-      return res.status(404).json({ error: '文章未找到' })
-    }
-    data.articles[index] = { ...data.articles[index], ...req.body }
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json(data.articles[index])
-  } catch (error) {
-    res.status(500).json({ error: '更新失败' })
-  }
-})
-
-app.delete('/api/articles/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'articles.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    data.articles = data.articles.filter(a => a.id !== req.params.id)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json({ success: true })
-  } catch (error) {
-    res.status(500).json({ error: '删除失败' })
-  }
-})
-
-// 分类管理
-app.get('/api/categories', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'categories.json')
-  try {
-    const data = fs.readFileSync(dataFile, 'utf8')
-    res.json(JSON.parse(data))
-  } catch (error) {
-    res.json({ categories: [] })
-  }
-})
-
-app.post('/api/categories', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'categories.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const newCategory = {
-      id: `cat-${Date.now()}`,
-      ...req.body,
-      count: 0
-    }
-    data.categories.push(newCategory)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.status(201).json(newCategory)
-  } catch (error) {
-    res.status(500).json({ error: '创建失败' })
-  }
-})
-
-app.put('/api/categories/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'categories.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const index = data.categories.findIndex(c => c.id === req.params.id)
-    if (index === -1) {
-      return res.status(404).json({ error: '分类未找到' })
-    }
-    data.categories[index] = { ...data.categories[index], ...req.body }
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json(data.categories[index])
-  } catch (error) {
-    res.status(500).json({ error: '更新失败' })
-  }
-})
-
-app.delete('/api/categories/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'categories.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    data.categories = data.categories.filter(c => c.id !== req.params.id)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json({ success: true })
-  } catch (error) {
-    res.status(500).json({ error: '删除失败' })
-  }
-})
-
-// 标签管理
-app.get('/api/tags', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'tags.json')
-  try {
-    const data = fs.readFileSync(dataFile, 'utf8')
-    res.json(JSON.parse(data))
-  } catch (error) {
-    res.json({ tags: [] })
-  }
-})
-
-app.post('/api/tags', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'tags.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const newTag = {
-      id: `tag-${Date.now()}`,
-      ...req.body,
-      count: 0
-    }
-    data.tags.push(newTag)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.status(201).json(newTag)
-  } catch (error) {
-    res.status(500).json({ error: '创建失败' })
-  }
-})
-
-app.put('/api/tags/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'tags.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    const index = data.tags.findIndex(t => t.id === req.params.id)
-    if (index === -1) {
-      return res.status(404).json({ error: '标签未找到' })
-    }
-    data.tags[index] = { ...data.tags[index], ...req.body }
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json(data.tags[index])
-  } catch (error) {
-    res.status(500).json({ error: '更新失败' })
-  }
-})
-
-app.delete('/api/tags/:id', (req, res) => {
-  const dataFile = join(__dirname, 'data', 'tags.json')
-  try {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'))
-    data.tags = data.tags.filter(t => t.id !== req.params.id)
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-    res.json({ success: true })
-  } catch (error) {
-    res.status(500).json({ error: '删除失败' })
+    console.error('代理请求失败:', targetUrl, error.message)
+    res.status(500).json({ error: '服务器错误' })
   }
 })
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`管理服务器运行在 http://0.0.0.0:${PORT}`)
+  console.log(`API 代理到 http://localhost:${API_SERVER}`)
 })

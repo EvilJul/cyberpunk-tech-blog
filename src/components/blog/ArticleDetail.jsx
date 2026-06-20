@@ -37,22 +37,25 @@ export default function ArticleDetail({ article, onBack }) {
   const renderContent = (content) => {
     if (!content) return null
     return content.split('\n').map((line, index) => {
+      const keyPrefix = line.substring(0, 50)
+      const uniqueKey = `${keyPrefix}-${index}`
+
       if (line.startsWith('# ')) {
-        return <h1 key={index} className="text-3xl font-bold text-white mb-4 mt-6">{line.slice(2)}</h1>
+        return <h1 key={uniqueKey} className="text-3xl font-bold text-white mb-4 mt-6">{line.slice(2)}</h1>
       }
       if (line.startsWith('## ')) {
-        return <h2 key={index} className="text-2xl font-bold text-white mb-3 mt-5">{line.slice(3)}</h2>
+        return <h2 key={uniqueKey} className="text-2xl font-bold text-white mb-3 mt-5">{line.slice(3)}</h2>
       }
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-xl font-bold text-white mb-2 mt-4">{line.slice(4)}</h3>
+        return <h3 key={uniqueKey} className="text-xl font-bold text-white mb-2 mt-4">{line.slice(4)}</h3>
       }
       if (line.startsWith('- ')) {
-        return <li key={index} className="text-dark-200 ml-4 mb-1 list-disc">{line.slice(2)}</li>
+        return <li key={uniqueKey} className="text-dark-200 ml-4 mb-1 list-disc">{line.slice(2)}</li>
       }
       if (line.trim() === '') {
-        return <br key={index} />
+        return <br key={uniqueKey} />
       }
-      return <p key={index} className="text-dark-200 mb-3 leading-relaxed">{line}</p>
+      return <p key={uniqueKey} className="text-dark-200 mb-3 leading-relaxed">{line}</p>
     })
   }
 
@@ -103,9 +106,9 @@ export default function ArticleDetail({ article, onBack }) {
 
           {article.tags && article.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {article.tags.map((tag, index) => (
-                <span 
-                  key={index}
+              {article.tags.map((tag) => (
+                <span
+                  key={tag}
                   className="flex items-center gap-1 px-3 py-1 bg-gold/10 text-gold rounded-full text-sm border border-gold/20"
                 >
                   <Tag size={12} />

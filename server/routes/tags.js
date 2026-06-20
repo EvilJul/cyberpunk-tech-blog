@@ -1,5 +1,6 @@
 import express from 'express'
 import { TagDAO } from '../db/otherDAO.js'
+import { authMiddleware, adminOnly } from '../middleware/auth.js'
 
 const router = express.Router()
 

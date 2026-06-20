@@ -1,0 +1,11 @@
+{
+  "name": "code-highlight",
+  "version": "1.0.0",
+  "description": "代码语法高亮插件",
+  "author": "Your Name",
+  "main": "index.js",
+  "keywords": ["plugin", "code", "highlight", "syntax"],
+  "dependencies": {
+    "prismjs": "^1.29.0"
+  }
+}

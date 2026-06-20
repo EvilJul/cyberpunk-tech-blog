@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, memo } from 'react'
 import { User, Mail, MessageSquare } from 'lucide-react'
 
-export default function CommentSection({ articleId }) {
+const CommentSection = memo(function CommentSection({ articleId }) {
   const [comments, setComments] = useState([])
   const [formData, setFormData] = useState({ author: '', email: '', content: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -13,17 +13,17 @@ export default function CommentSection({ articleId }) {
       .catch(err => console.error('获取评论失败:', err))
   }, [articleId])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
     setSubmitting(true)
-    
+
     try {
       const res = await fetch(`/api/comments/${articleId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       })
-      
+
       if (res.ok) {
         const newComment = await res.json()
         setComments([...comments, newComment])
@@ -34,7 +34,7 @@ export default function CommentSection({ articleId }) {
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [articleId, formData, comments])
 
   return (
     <div className="mt-12">
@@ -100,4 +100,6 @@ export default function CommentSection({ articleId }) {
       </div>
     </div>
   )
-}
+})
+
+export default CommentSection

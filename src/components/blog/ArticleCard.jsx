@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, memo } from 'react'
 import { Calendar, Eye, Heart, ArrowRight } from 'lucide-react'
 import { logger } from '../../utils/logger'
 
@@ -6,8 +6,8 @@ function highlightText(text, query) {
   if (!query || !query.trim()) return text
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
   const parts = text.split(regex)
-  return parts.map((part, i) => 
-    regex.test(part) ? <mark key={i} className="bg-gold/30 text-gold rounded px-0.5">{part}</mark> : part
+  return parts.map((part, i) =>
+    regex.test(part) ? <mark key={`${part}-${i}`} className="bg-gold/30 text-gold rounded px-0.5">{part}</mark> : part
   )
 }
 
@@ -25,7 +25,7 @@ function getSnippet(text, query, contextLen = 12) {
   return snippet
 }
 
-export default function ArticleCard({ article, onClick, searchQuery }) {
+const ArticleCard = memo(function ArticleCard({ article, onClick, searchQuery }) {
   const [views, setViews] = useState(article.views || 0)
   const [likes, setLikes] = useState(article.likes || 0)
   const [isLiked, setIsLiked] = useState(false)
@@ -35,23 +35,23 @@ export default function ArticleCard({ article, onClick, searchQuery }) {
       .then(res => res.json())
       .then(data => setViews(data.views))
       .catch(() => {})
-    
+
     fetch(`/api/stats/article/${article.id}/likes`)
       .then(res => res.json())
       .then(data => setLikes(data.likes))
       .catch(() => {})
   }, [article.id])
 
-  const handleClick = (e) => {
+  const handleClick = useCallback((e) => {
     e.preventDefault()
     e.stopPropagation()
     logger.info('ArticleCard 点击', { title: article.title, hasCallback: !!onClick })
     if (onClick) {
       onClick(article)
     }
-  }
+  }, [article, onClick])
 
-  const handleLike = async (e) => {
+  const handleLike = useCallback(async (e) => {
     e.stopPropagation()
     e.preventDefault()
     if (!isLiked) {
@@ -64,7 +64,7 @@ export default function ArticleCard({ article, onClick, searchQuery }) {
         logger.error('点赞失败', { error: err.message })
       }
     }
-  }
+  }, [article.id, isLiked])
 
   const titleSnippet = searchQuery ? getSnippet(article.title, searchQuery) : null
   const excerptSnippet = searchQuery ? getSnippet(article.excerpt, searchQuery) : null
@@ -99,8 +99,8 @@ export default function ArticleCard({ article, onClick, searchQuery }) {
       
       <div className="flex items-center justify-between">
         <div className="flex flex-wrap gap-1.5">
-          {article.tags.slice(0, 3).map((tag, index) => (
-            <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-dark-800/80 text-dark-400 border border-dark-700/50">
+          {article.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-dark-800/80 text-dark-400 border border-dark-700/50">
               {searchQuery ? highlightText(tag, searchQuery) : tag}
             </span>
           ))}
@@ -122,4 +122,6 @@ export default function ArticleCard({ article, onClick, searchQuery }) {
       </div>
     </div>
   )
-}
+})
+
+export default ArticleCard

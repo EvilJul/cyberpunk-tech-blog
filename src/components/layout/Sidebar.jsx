@@ -59,10 +59,14 @@ export default function Sidebar() {
   return (
     <aside className="w-full space-y-5">
       <div className="glass-card p-6 text-center">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gold via-gold-light to-gold-dark flex items-center justify-center mb-4 mx-auto shadow-lg shadow-gold/20">
-          <span className="text-dark-950 font-bold text-2xl">
-            {(settings?.author || 'T').charAt(0).toUpperCase()}
-          </span>
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gold via-gold-light to-gold-dark flex items-center justify-center mb-4 mx-auto shadow-lg shadow-gold/20 overflow-hidden">
+          {settings?.avatar ? (
+            <img src={settings.avatar} alt={settings.author || 'Avatar'} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-dark-950 font-bold text-2xl">
+              {(settings?.author || 'T').charAt(0).toUpperCase()}
+            </span>
+          )}
         </div>
         <h3 className="text-lg font-bold text-white mb-1">{settings?.author || 'Tech Blogger'}</h3>
         <p className="text-dark-400 text-sm mb-4">{settings?.bio || '探索技术世界，分享编程经验'}</p>
@@ -112,9 +116,9 @@ export default function Sidebar() {
             <span>分类</span>
           </h3>
           <div className="space-y-1">
-            {categories.map((cat, index) => (
-              <button 
-                key={index}
+            {categories.map((cat) => (
+              <button
+                key={cat.id || cat.slug || cat.name}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-dark-300 hover:text-gold hover:bg-dark-800/50 transition-all text-sm"
               >
                 <span>{cat.name}</span>
@@ -132,9 +136,9 @@ export default function Sidebar() {
             <span>标签</span>
           </h3>
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag, index) => (
-              <button 
-                key={index}
+            {tags.map((tag) => (
+              <button
+                key={tag.id || tag.slug || tag}
                 className="px-3 py-1.5 rounded-full text-xs bg-dark-800/80 text-dark-300 hover:text-gold hover:bg-gold/10 border border-dark-700/50 hover:border-gold/30 transition-all"
               >
                 {tag}

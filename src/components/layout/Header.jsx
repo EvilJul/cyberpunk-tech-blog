@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Search, Menu, X, Home, BookOpen, Tag, User, X as CloseIcon } from 'lucide-react'
+import ThemeSwitcher from '../ThemeSwitcher'
 
 export default function Header({ onNavigate, currentView }) {
   const [scrolled, setScrolled] = useState(false)
@@ -91,6 +92,7 @@ export default function Header({ onNavigate, currentView }) {
             <span>关于</span>
           </button>
           <div className="w-px h-6 bg-dark-700 mx-2"></div>
+          <ThemeSwitcher />
           <button 
             onClick={() => setSearchOpen(true)}
             className="p-2 text-dark-300 hover:text-gold hover:bg-dark-800/50 rounded-xl transition-all"
@@ -146,6 +148,9 @@ export default function Header({ onNavigate, currentView }) {
               <Search size={18} />
               <span>搜索</span>
             </button>
+            <div className="px-4 py-2">
+              <ThemeSwitcher />
+            </div>
           </nav>
         </div>
       )}

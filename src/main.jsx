@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { ThemeProvider } from './themes/ThemeProvider'
 import './index.css'
 
 window.addEventListener('error', (e) => {
@@ -22,6 +23,8 @@ window.addEventListener('unhandledrejection', (e) => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <SettingsProvider>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </SettingsProvider>
 )

@@ -1,9 +1,26 @@
+import multer from 'multer'
 import logger from '../utils/logger.js'
 
 /**
  * 全局错误处理中间件
  */
 export function errorHandler(err, req, res, next) {
+  // 处理 Multer 错误
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: '一次只能上传 1 个文件' })
+    }
+    return res.status(400).json({ error: `上传错误: ${err.message}` })
+  }
+
+  // 处理文件类型错误
+  if (err.message && err.message.includes('不支持的文件类型')) {
+    return res.status(400).json({ error: err.message })
+  }
+
   // 记录错误日志
   logger.error('请求错误', {
     error: err.message,

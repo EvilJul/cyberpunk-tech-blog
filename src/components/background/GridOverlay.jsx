@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { useSettings } from '../../contexts/SettingsContext'
+import { useTheme } from '../../themes/ThemeProvider'
 
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -10,12 +10,12 @@ function hexToRgb(hex) {
 
 export default function GridOverlay() {
   const canvasRef = useRef(null)
-  const { colors } = useSettings()
-  const [cachedRgb, setCachedRgb] = useState(() => hexToRgb(colors.primary))
+  const { theme } = useTheme()
+  const [cachedRgb, setCachedRgb] = useState(() => hexToRgb(theme.colors.primary))
 
   useEffect(() => {
-    setCachedRgb(hexToRgb(colors.primary))
-  }, [colors.primary])
+    setCachedRgb(hexToRgb(theme.colors.primary))
+  }, [theme.colors.primary])
 
   useEffect(() => {
     const canvas = canvasRef.current

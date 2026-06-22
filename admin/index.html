@@ -759,6 +759,48 @@
     #crop-container { user-select:none; }
     #crop-canvas { display:block; max-width:100%; }
     #crop-zoom { accent-color:#ffd700; cursor:pointer; }
+
+    /* 主题配置 */
+    .color-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .color-input-group label {
+      font-size: 12px;
+      color: #888;
+    }
+    .color-input-group input[type="color"] {
+      width: 32px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      cursor: pointer;
+      background: transparent;
+    }
+    .color-input-group input[type="text"] {
+      width: 100%;
+      font-size: 12px;
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .toggle-label:hover {
+      background: rgba(255,255,255,0.06);
+    }
+    .toggle-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #ffd700;
+    }
   </style>
 </head>
 <body>
@@ -1004,6 +1046,7 @@
               </svg>
               保存设置
             </button>
+            <span id="save-status" style="font-size: 12px; margin-left: 8px;"></span>
           </div>
           
           <div class="settings-grid">
@@ -1143,6 +1186,316 @@
                 <div class="setting-desc">用于联系或评论通知</div>
               </div>
               <input type="text" id="setting-email" placeholder="example@email.com" style="width: 200px; margin: 0;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 主题配置卡片 -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <div class="card-title">主题配置</div>
+            <div style="display: flex; gap: 8px;">
+              <button onclick="importTheme()" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导入主题</button>
+              <button onclick="exportTheme()" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导出主题</button>
+              <input type="file" id="theme-file-input" accept=".json" style="display: none;" onchange="handleThemeFileImport(event)">
+            </div>
+          </div>
+
+          <div style="padding: 16px;">
+            <p style="font-size: 12px; color: #888; margin-bottom: 16px;">💡 想要 AI 生成主题？点击「导出主题」下载当前配置，将内容发给 AI 并描述你想要的风格，AI 会生成新的主题配置文件。</p>
+
+            <!-- 主题名称 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">主题名称</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="theme-name" value="暗金赛博朋克" style="flex: 1; max-width: 300px;">
+                <span id="theme-name-status" style="font-size: 11px; color: #888;"></span>
+              </div>
+              <p style="font-size: 11px; color: #666; margin-top: 4px;">修改预设主题后会自动保存为自定义主题</p>
+            </div>
+
+            <!-- 预设主题 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">预设主题</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button onclick="applyPreset('cyberpunk')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                  <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #6366f1, #8b5cf6); margin-right: 6px; vertical-align: middle;"></span>
+                  暗金赛博朋克
+                </button>
+                <button onclick="applyPreset('minimal')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                  <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #000, #6c757d); margin-right: 6px; vertical-align: middle;"></span>
+                  极简白
+                </button>
+                <button onclick="applyPreset('dark')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                  <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #60a5fa, #a78bfa); margin-right: 6px; vertical-align: middle;"></span>
+                  暗色
+                </button>
+              </div>
+            </div>
+
+            <!-- 颜色配置 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">颜色配置</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                <div class="color-input-group">
+                  <label>背景色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-background" value="#0a0a0f" onchange="updateThemeColor('background', this.value)">
+                    <input type="text" id="theme-color-background-hex" value="#0a0a0f" onchange="updateThemeColorFromHex('background', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>表面色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-surface" value="#141837" onchange="updateThemeColor('surface', this.value)">
+                    <input type="text" id="theme-color-surface-hex" value="#141837" onchange="updateThemeColorFromHex('surface', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>表面亮色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-surfaceLight" value="#202648" onchange="updateThemeColor('surfaceLight', this.value)">
+                    <input type="text" id="theme-color-surfaceLight-hex" value="#202648" onchange="updateThemeColorFromHex('surfaceLight', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>边框色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-border" value="#2a2a3a" onchange="updateThemeColor('border', this.value)">
+                    <input type="text" id="theme-color-border-hex" value="#2a2a3a" onchange="updateThemeColorFromHex('border', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>主色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-primary" value="#6366f1" onchange="updateThemeColor('primary', this.value)">
+                    <input type="text" id="theme-color-primary-hex" value="#6366f1" onchange="updateThemeColorFromHex('primary', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>主色亮</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-primaryLight" value="#818cf8" onchange="updateThemeColor('primaryLight', this.value)">
+                    <input type="text" id="theme-color-primaryLight-hex" value="#818cf8" onchange="updateThemeColorFromHex('primaryLight', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>主色暗</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-primaryDark" value="#4f46e5" onchange="updateThemeColor('primaryDark', this.value)">
+                    <input type="text" id="theme-color-primaryDark-hex" value="#4f46e5" onchange="updateThemeColorFromHex('primaryDark', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>辅助色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-secondary" value="#8b5cf6" onchange="updateThemeColor('secondary', this.value)">
+                    <input type="text" id="theme-color-secondary-hex" value="#8b5cf6" onchange="updateThemeColorFromHex('secondary', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>辅助亮色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-secondaryLight" value="#a78bfa" onchange="updateThemeColor('secondaryLight', this.value)">
+                    <input type="text" id="theme-color-secondaryLight-hex" value="#a78bfa" onchange="updateThemeColorFromHex('secondaryLight', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>强调色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-accent" value="#C4612F" onchange="updateThemeColor('accent', this.value)">
+                    <input type="text" id="theme-color-accent-hex" value="#C4612F" onchange="updateThemeColorFromHex('accent', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>强调亮色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-accentLight" value="#A94E22" onchange="updateThemeColor('accentLight', this.value)">
+                    <input type="text" id="theme-color-accentLight-hex" value="#A94E22" onchange="updateThemeColorFromHex('accentLight', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>文字主色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-textPrimary" value="#ffffff" onchange="updateThemeColor('textPrimary', this.value)">
+                    <input type="text" id="theme-color-textPrimary-hex" value="#ffffff" onchange="updateThemeColorFromHex('textPrimary', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>文字副色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-textSecondary" value="#a0aec0" onchange="updateThemeColor('textSecondary', this.value)">
+                    <input type="text" id="theme-color-textSecondary-hex" value="#a0aec0" onchange="updateThemeColorFromHex('textSecondary', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>文字弱色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-textMuted" value="#5C635D" onchange="updateThemeColor('textMuted', this.value)">
+                    <input type="text" id="theme-color-textMuted-hex" value="#5C635D" onchange="updateThemeColorFromHex('textMuted', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>成功色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-success" value="#10b981" onchange="updateThemeColor('success', this.value)">
+                    <input type="text" id="theme-color-success-hex" value="#10b981" onchange="updateThemeColorFromHex('success', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>警告色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-warning" value="#f59e0b" onchange="updateThemeColor('warning', this.value)">
+                    <input type="text" id="theme-color-warning-hex" value="#f59e0b" onchange="updateThemeColorFromHex('warning', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>错误色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-error" value="#ef4444" onchange="updateThemeColor('error', this.value)">
+                    <input type="text" id="theme-color-error-hex" value="#ef4444" onchange="updateThemeColorFromHex('error', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+                <div class="color-input-group">
+                  <label>信息色</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="theme-color-info" value="#3b82f6" onchange="updateThemeColor('info', this.value)">
+                    <input type="text" id="theme-color-info-hex" value="#3b82f6" onchange="updateThemeColorFromHex('info', this.value)" style="flex: 1;">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 字体配置 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">字体配置</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div>
+                  <label style="font-size: 12px; color: #888;">标题字体</label>
+                  <input type="text" id="theme-font-heading" value="Fraunces, serif" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">正文字体</label>
+                  <input type="text" id="theme-font-body" value="Inter, sans-serif" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">代码字体</label>
+                  <input type="text" id="theme-font-code" value="Fira Code, monospace" style="width: 100%; margin-top: 4px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- 特效开关 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">特效开关</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-pixelSnow" checked onchange="updateThemeEffect('pixelSnow', this.checked)">
+                  <span>粒子雪花</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-sideRays" checked onchange="updateThemeEffect('sideRays', this.checked)">
+                  <span>侧边光线</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-splashCursor" checked onchange="updateThemeEffect('splashCursor', this.checked)">
+                  <span>鼠标水流</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-gridOverlay" checked onchange="updateThemeEffect('gridOverlay', this.checked)">
+                  <span>网格覆盖</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-glassEffect" checked onchange="updateThemeEffect('glassEffect', this.checked)">
+                  <span>玻璃态</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="theme-effect-animations" checked onchange="updateThemeEffect('animations', this.checked)">
+                  <span>动画效果</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 背景图片 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">背景图片</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+                <div>
+                  <label style="font-size: 12px; color: #888;">图片地址</label>
+                  <div style="display: flex; gap: 6px; margin-top: 4px;">
+                    <input type="text" id="theme-bg-image" placeholder="https://example.com/bg.jpg" style="flex: 1;" onchange="updateThemeBg()">
+                    <button onclick="document.getElementById('theme-bg-file').click()" class="btn" style="padding: 4px 8px; margin: 0; font-size: 11px;">上传</button>
+                    <input type="file" id="theme-bg-file" accept="image/*" style="display: none;" onchange="handleBgImageUpload(event)">
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">图片大小</label>
+                  <select id="theme-bg-size" style="width: 100%; margin-top: 4px;" onchange="updateThemeBg()">
+                    <option value="cover">cover（覆盖）</option>
+                    <option value="contain">contain（包含）</option>
+                    <option value="auto">auto（自动）</option>
+                    <option value="100%">100%（拉伸）</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">图片位置</label>
+                  <select id="theme-bg-position" style="width: 100%; margin-top: 4px;" onchange="updateThemeBg()">
+                    <option value="center">居中</option>
+                    <option value="top">顶部</option>
+                    <option value="bottom">底部</option>
+                    <option value="left">左侧</option>
+                    <option value="right">右侧</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">遮罩透明度 (<span id="theme-bg-overlay-val">0.7</span>)</label>
+                  <input type="range" id="theme-bg-overlay" min="0" max="1" step="0.05" value="0.7" style="width: 100%; margin-top: 4px; accent-color: var(--theme-primary, #ffd700);" onchange="document.getElementById('theme-bg-overlay-val').textContent = this.value; updateThemeBg();">
+                </div>
+              </div>
+              <div id="theme-bg-preview" style="margin-top: 12px; height: 60px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: none; background-size: cover; background-position: center;"></div>
+            </div>
+
+            <!-- 圆角配置 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">圆角配置</div>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                <div>
+                  <label style="font-size: 12px; color: #888;">sm</label>
+                  <input type="text" id="theme-radius-sm" value="0.25rem" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">md</label>
+                  <input type="text" id="theme-radius-md" value="0.5rem" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">lg</label>
+                  <input type="text" id="theme-radius-lg" value="1rem" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888;">xl</label>
+                  <input type="text" id="theme-radius-xl" value="1.5rem" style="width: 100%; margin-top: 4px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- 实时预览 -->
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">预览</div>
+              <div id="theme-preview" style="border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--background);">
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                  <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: var(--text-primary); font-weight: bold;">A</div>
+                  <div>
+                    <div style="font-weight: 600;">预览标题</div>
+                    <div style="font-size: 12px; opacity: 0.7;">这是一段预览文字</div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button style="padding: 6px 16px; border-radius: var(--radius-md); background: var(--primary); color: var(--text-primary); border: none; cursor: pointer;">主按钮</button>
+                  <button style="padding: 6px 16px; border-radius: var(--radius-md); background: transparent; color: var(--text-secondary); border: 1px solid var(--border); cursor: pointer;">次按钮</button>
+                  <span style="padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px; background: var(--success); color: #fff;">成功</span>
+                  <span style="padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px; background: var(--error); color: #fff;">错误</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1298,6 +1651,7 @@
       loadSettings();
       loadStats();
       loadArticles();
+      bindAutoSave();
 
       // 头像上传事件
       document.getElementById('avatar-upload').addEventListener('change', async (e) => {
@@ -1330,6 +1684,11 @@
         if (data.settings) {
           settings = { ...settings, ...data.settings };
           applySettings();
+
+          // 加载主题配置
+          if (data.settings.theme) {
+            loadThemeToUI(data.settings.theme);
+          }
         }
       } catch (e) {
         console.log('使用默认设置');
@@ -1394,6 +1753,9 @@
       settings.bio = document.getElementById('setting-bio').value;
       settings.github = document.getElementById('setting-github').value;
       settings.email = document.getElementById('setting-email').value;
+
+      // 保存主题配置
+      settings.theme = readThemeFromUI();
       
       try {
         await fetch('/api/settings', {
@@ -1401,10 +1763,68 @@
           headers: getAuthHeaders(),
           body: JSON.stringify(settings)
         });
-        alert('设置已保存');
+        showSaveStatus('已保存');
       } catch (e) {
-        alert('保存失败，请重试');
+        showSaveStatus('保存失败', true);
       }
+    }
+
+    // 显示保存状态
+    function showSaveStatus(msg, isError = false) {
+      const statusEl = document.getElementById('save-status');
+      if (statusEl) {
+        statusEl.textContent = msg;
+        statusEl.style.color = isError ? '#ef4444' : '#10b981';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+      }
+    }
+
+    // 自动保存（防抖）
+    let autoSaveTimer = null;
+    function autoSave() {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        saveSettings();
+      }, 500);
+    }
+
+    // 为所有设置输入框绑定自动保存事件
+    function bindAutoSave() {
+      const inputs = [
+        'setting-title', 'setting-description', 'setting-excerpt', 'setting-perpage',
+        'setting-sidebar', 'setting-author', 'setting-bio', 'setting-github', 'setting-email'
+      ];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', autoSave);
+          el.addEventListener('change', autoSave);
+        }
+      });
+
+      // 开关类设置
+      ['toggle-grid', 'toggle-footer'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', autoSave);
+      });
+
+      // 颜色选择
+      document.querySelectorAll('.color-option').forEach(opt => {
+        opt.addEventListener('click', autoSave);
+      });
+
+      // 主题配置：字体和圆角输入框
+      const themeInputs = [
+        'theme-name', 'theme-font-heading', 'theme-font-body', 'theme-font-code',
+        'theme-radius-sm', 'theme-radius-md', 'theme-radius-lg', 'theme-radius-xl'
+      ];
+      themeInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', autoSave);
+          el.addEventListener('change', autoSave);
+        }
+      });
     }
 
     // 加载统计数据
@@ -2069,6 +2489,343 @@
         }
       }, 'image/jpeg', 0.92);
     }
+
+    /* ========== 主题配置 ========== */
+    let currentTheme = {
+      name: '暗金赛博朋克',
+      preset: 'cyberpunk',
+      background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.7 },
+      colors: {},
+      fonts: {},
+      effects: {},
+      borderRadius: {}
+    };
+
+    // 预设主题
+    const themePresets = {
+      cyberpunk: {
+        name: '暗金赛博朋克',
+        preset: 'cyberpunk',
+        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.7 },
+        colors: {
+          background: '#0a0a0f', surface: '#141837', surfaceLight: '#202648', border: '#2a2a3a',
+          primary: '#6366f1', primaryLight: '#818cf8', primaryDark: '#4f46e5',
+          secondary: '#8b5cf6', secondaryLight: '#a78bfa',
+          accent: '#C4612F', accentLight: '#A94E22',
+          textPrimary: '#ffffff', textSecondary: '#a0aec0', textMuted: '#5C635D',
+          success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6'
+        },
+        fonts: { heading: 'Fraunces, serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
+        effects: { pixelSnow: true, sideRays: true, splashCursor: true, gridOverlay: true, glassEffect: true, animations: true },
+        borderRadius: { sm: '0.25rem', md: '0.5rem', lg: '1rem', xl: '1.5rem' }
+      },
+      minimal: {
+        name: '极简白',
+        preset: 'minimal',
+        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.9 },
+        colors: {
+          background: '#ffffff', surface: '#f8f9fa', surfaceLight: '#e9ecef', border: '#dee2e6',
+          primary: '#000000', primaryLight: '#333333', primaryDark: '#000000',
+          secondary: '#6c757d', secondaryLight: '#868e96',
+          accent: '#0066cc', accentLight: '#3399ff',
+          textPrimary: '#212529', textSecondary: '#495057', textMuted: '#6c757d',
+          success: '#28a745', warning: '#ffc107', error: '#dc3545', info: '#17a2b8'
+        },
+        fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
+        effects: { pixelSnow: false, sideRays: false, splashCursor: false, gridOverlay: false, glassEffect: false, animations: true },
+        borderRadius: { sm: '0.25rem', md: '0.375rem', lg: '0.5rem', xl: '0.75rem' }
+      },
+      dark: {
+        name: '暗色',
+        preset: 'dark',
+        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.8 },
+        colors: {
+          background: '#1a1a1a', surface: '#2d2d2d', surfaceLight: '#3d3d3d', border: '#404040',
+          primary: '#60a5fa', primaryLight: '#93c5fd', primaryDark: '#3b82f6',
+          secondary: '#a78bfa', secondaryLight: '#c4b5fd',
+          accent: '#f59e0b', accentLight: '#fbbf24',
+          textPrimary: '#f5f5f5', textSecondary: '#d4d4d4', textMuted: '#a3a3a3',
+          success: '#34d399', warning: '#fbbf24', error: '#f87171', info: '#60a5fa'
+        },
+        fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
+        effects: { pixelSnow: false, sideRays: false, splashCursor: true, gridOverlay: false, glassEffect: true, animations: true },
+        borderRadius: { sm: '0.25rem', md: '0.5rem', lg: '0.75rem', xl: '1rem' }
+      }
+    };
+
+    // 加载主题配置到 UI
+    function loadThemeToUI(theme) {
+      currentTheme = JSON.parse(JSON.stringify(theme));
+
+      // 主题名称
+      document.getElementById('theme-name').value = theme.name || '';
+      document.getElementById('theme-name-status').textContent = theme.preset === 'custom' ? '(自定义)' : '';
+
+      // 背景图片
+      if (theme.background) {
+        document.getElementById('theme-bg-image').value = theme.background.image || '';
+        document.getElementById('theme-bg-size').value = theme.background.size || 'cover';
+        document.getElementById('theme-bg-position').value = theme.background.position || 'center';
+        document.getElementById('theme-bg-overlay').value = theme.background.overlay || 0.7;
+        document.getElementById('theme-bg-overlay-val').textContent = theme.background.overlay || 0.7;
+
+        const bgPreview = document.getElementById('theme-bg-preview');
+        if (theme.background.image) {
+          bgPreview.style.display = 'block';
+          bgPreview.style.backgroundImage = `url(${theme.background.image})`;
+          bgPreview.style.backgroundSize = theme.background.size || 'cover';
+          bgPreview.style.backgroundPosition = theme.background.position || 'center';
+        } else {
+          bgPreview.style.display = 'none';
+        }
+      }
+
+      // 颜色
+      Object.entries(theme.colors).forEach(([key, value]) => {
+        const colorInput = document.getElementById(`theme-color-${key}`);
+        const hexInput = document.getElementById(`theme-color-${key}-hex`);
+        if (colorInput) colorInput.value = value;
+        if (hexInput) hexInput.value = value;
+      });
+
+      // 字体
+      document.getElementById('theme-font-heading').value = theme.fonts.heading || '';
+      document.getElementById('theme-font-body').value = theme.fonts.body || '';
+      document.getElementById('theme-font-code').value = theme.fonts.code || '';
+
+      // 特效
+      Object.entries(theme.effects).forEach(([key, value]) => {
+        const checkbox = document.getElementById(`theme-effect-${key}`);
+        if (checkbox) checkbox.checked = value;
+      });
+
+      // 圆角
+      document.getElementById('theme-radius-sm').value = theme.borderRadius.sm || '';
+      document.getElementById('theme-radius-md').value = theme.borderRadius.md || '';
+      document.getElementById('theme-radius-lg').value = theme.borderRadius.lg || '';
+      document.getElementById('theme-radius-xl').value = theme.borderRadius.xl || '';
+
+      updateThemePreview();
+    }
+
+    // 从 UI 读取主题配置
+    function readThemeFromUI() {
+      const theme = { ...currentTheme };
+
+      // 主题名称
+      theme.name = document.getElementById('theme-name').value || '未命名主题';
+
+      // 背景图片
+      theme.background = {
+        image: document.getElementById('theme-bg-image').value,
+        size: document.getElementById('theme-bg-size').value,
+        position: document.getElementById('theme-bg-position').value,
+        repeat: 'no-repeat',
+        overlay: parseFloat(document.getElementById('theme-bg-overlay').value)
+      };
+
+      // 字体
+      theme.fonts = {
+        heading: document.getElementById('theme-font-heading').value,
+        body: document.getElementById('theme-font-body').value,
+        code: document.getElementById('theme-font-code').value
+      };
+
+      // 圆角
+      theme.borderRadius = {
+        sm: document.getElementById('theme-radius-sm').value,
+        md: document.getElementById('theme-radius-md').value,
+        lg: document.getElementById('theme-radius-lg').value,
+        xl: document.getElementById('theme-radius-xl').value
+      };
+
+      return theme;
+    }
+
+    // 更新颜色（修改预设主题时自动保存为自定义主题）
+    function updateThemeColor(key, value) {
+      // 如果当前是预设主题，自动转换为自定义主题
+      if (currentTheme.preset !== 'custom') {
+        currentTheme.preset = 'custom';
+        document.getElementById('theme-name-status').textContent = '(自定义)';
+      }
+      currentTheme.colors[key] = value;
+      document.getElementById(`theme-color-${key}-hex`).value = value;
+      updateThemePreview();
+      autoSave();
+    }
+
+    function updateThemeColorFromHex(key, value) {
+      if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+        // 如果当前是预设主题，自动转换为自定义主题
+        if (currentTheme.preset !== 'custom') {
+          currentTheme.preset = 'custom';
+          document.getElementById('theme-name-status').textContent = '(自定义)';
+        }
+        currentTheme.colors[key] = value;
+        document.getElementById(`theme-color-${key}`).value = value;
+        updateThemePreview();
+        autoSave();
+      }
+    }
+
+    // 更新特效
+    function updateThemeEffect(key, value) {
+      currentTheme.effects[key] = value;
+      updateThemePreview();
+      autoSave();
+    }
+
+    // 更新背景图片
+    function updateThemeBg() {
+      currentTheme.background = {
+        image: document.getElementById('theme-bg-image').value,
+        size: document.getElementById('theme-bg-size').value,
+        position: document.getElementById('theme-bg-position').value,
+        repeat: 'no-repeat',
+        overlay: parseFloat(document.getElementById('theme-bg-overlay').value)
+      };
+
+      const bgPreview = document.getElementById('theme-bg-preview');
+      if (currentTheme.background.image) {
+        bgPreview.style.display = 'block';
+        bgPreview.style.backgroundImage = `url(${currentTheme.background.image})`;
+        bgPreview.style.backgroundSize = currentTheme.background.size;
+        bgPreview.style.backgroundPosition = currentTheme.background.position;
+      } else {
+        bgPreview.style.display = 'none';
+      }
+      autoSave();
+    }
+
+    // 上传背景图片
+    async function handleBgImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const url = await uploadImage(file, false);
+        document.getElementById('theme-bg-image').value = url;
+        updateThemeBg();
+      } catch (e) {
+        alert('上传失败：' + e.message);
+      }
+      event.target.value = '';
+    }
+
+    // 应用预设
+    function applyPreset(presetId) {
+      const preset = themePresets[presetId];
+      if (preset) {
+        loadThemeToUI(preset);
+      }
+    }
+
+    // 更新预览
+    function updateThemePreview() {
+      const preview = document.getElementById('theme-preview');
+      const c = currentTheme.colors;
+      const r = currentTheme.borderRadius;
+      const f = currentTheme.fonts;
+
+      preview.style.background = c.background;
+      preview.style.borderColor = c.border;
+      preview.style.color = c.textPrimary;
+
+      // 更新预览中的子元素
+      const avatar = preview.querySelector('div > div:first-child');
+      if (avatar) {
+        avatar.style.background = c.primary;
+        avatar.style.color = c.textPrimary;
+      }
+      const title = preview.querySelector('div > div:last-child > div:first-child');
+      if (title) title.style.color = c.textPrimary;
+      const desc = preview.querySelector('div > div:last-child > div:last-child');
+      if (desc) desc.style.color = c.textSecondary;
+      const btn1 = preview.querySelector('button:first-child');
+      if (btn1) {
+        btn1.style.background = c.primary;
+        btn1.style.color = c.textPrimary;
+        btn1.style.borderRadius = r.md;
+      }
+      const btn2 = preview.querySelector('button:nth-child(2)');
+      if (btn2) {
+        btn2.style.color = c.textSecondary;
+        btn2.style.borderColor = c.border;
+        btn2.style.borderRadius = r.md;
+      }
+      const badge1 = preview.querySelector('span:first-of-type');
+      if (badge1) {
+        badge1.style.background = c.success;
+        badge1.style.borderRadius = r.sm;
+      }
+      const badge2 = preview.querySelector('span:last-of-type');
+      if (badge2) {
+        badge2.style.background = c.error;
+        badge2.style.borderRadius = r.sm;
+      }
+    }
+
+    // 导出主题
+    function exportTheme() {
+      const theme = readThemeFromUI();
+      const blob = new Blob([JSON.stringify(theme, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `theme-${theme.name || 'custom'}-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // 导入主题
+    function importTheme() {
+      document.getElementById('theme-file-input').click();
+    }
+
+    function handleThemeFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+
+          // 验证必要字段
+          if (!imported.colors || !imported.fonts || !imported.effects || !imported.borderRadius) {
+            alert('主题文件格式不完整，缺少必要的 colors/fonts/effects/borderRadius 字段');
+            return;
+          }
+
+          // 合并默认值
+          const merged = {
+            name: imported.name || '导入的主题',
+            preset: 'custom',
+            background: { ...themePresets.cyberpunk.background, ...imported.background },
+            colors: { ...themePresets.cyberpunk.colors, ...imported.colors },
+            fonts: { ...themePresets.cyberpunk.fonts, ...imported.fonts },
+            effects: { ...themePresets.cyberpunk.effects, ...imported.effects },
+            borderRadius: { ...themePresets.cyberpunk.borderRadius, ...imported.borderRadius }
+          };
+
+          loadThemeToUI(merged);
+          alert('主题导入成功！请点击保存按钮应用主题。');
+        } catch (err) {
+          alert('解析主题文件失败：' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // 在保存设置时包含主题
+    const originalSaveSettings = saveSettings;
+    saveSettings = async function() {
+      const theme = readThemeFromUI();
+      settings.theme = theme;
+      return originalSaveSettings.call(this);
+    };
   </script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 import rateLimit from 'express-rate-limit'
 
-// 通用 API 速率限制：15分钟内最多 100 次请求
+// 通用 API 速率限制：15分钟内最多 300 次请求
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分钟
-  max: 100, // 最多 100 次请求
+  max: 300, // 最多 300 次请求
   message: {
     error: '请求过于频繁，请稍后再试',
     retryAfter: '15分钟'

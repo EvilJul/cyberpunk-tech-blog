@@ -4,12 +4,16 @@ import Sidebar from './components/layout/Sidebar'
 import ArticleList from './components/blog/ArticleList'
 import ArticleDetail from './components/blog/ArticleDetail'
 import GridOverlay from './components/background/GridOverlay'
+import PixelSnow from './components/background/PixelSnow'
+import SplashCursor from './components/background/SplashCursor'
 import { useSettings } from './contexts/SettingsContext'
+import { useTheme } from './themes/ThemeProvider'
 import { logger } from './utils/logger'
 
 function App() {
   const [selectedArticle, setSelectedArticle] = useState(null)
   const { settings, loading } = useSettings()
+  const { theme } = useTheme()
 
   useEffect(() => {
     logger.info('App 组件已挂载')
@@ -38,17 +42,20 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: 'var(--theme-primary)' }}></div>
       </div>
     )
   }
 
   const isSidebarLeft = settings.sidebar === 'left'
+  const effects = theme?.effects || {}
 
   return (
-    <div className="min-h-screen bg-dark-950 relative">
-      {settings.grid && <GridOverlay />}
+    <div className="min-h-screen relative" style={{ color: 'var(--theme-text-primary)' }}>
+      {effects.gridOverlay && <GridOverlay />}
+      {effects.pixelSnow && <PixelSnow />}
+      {effects.splashCursor && <SplashCursor />}
 
       <div className="relative z-10">
         <main className="pt-4">

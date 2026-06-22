@@ -52,12 +52,12 @@ function App() {
   const effects = theme?.effects || {}
 
   return (
-    <div className="min-h-screen relative" style={{ color: 'var(--theme-text-primary)' }}>
+    <div className="min-h-screen relative" style={{ color: 'var(--theme-text-primary)', backgroundColor: 'transparent' }}>
       {effects.gridOverlay && <GridOverlay />}
       {effects.pixelSnow && <PixelSnow />}
       {effects.splashCursor && <SplashCursor />}
 
-      <div className="relative z-10">
+      <div className="relative z-10" style={{ backgroundColor: 'transparent' }}>
         <main className="pt-4">
           <div className="max-w-6xl mx-auto px-4 py-8">
             <div className={`flex flex-col lg:flex-row gap-8 ${isSidebarLeft ? 'lg:flex-row-reverse' : ''}`}>

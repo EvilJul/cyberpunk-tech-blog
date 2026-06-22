@@ -23,7 +23,18 @@ export function SettingsProvider({ children }) {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const res = await fetch('/api/settings')
+      const res = await fetch('/api/settings', {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+
       const data = await res.json()
       if (data.settings) {
         const { theme, ...rest } = data.settings
@@ -38,8 +49,22 @@ export function SettingsProvider({ children }) {
 
   useEffect(() => {
     fetchSettings()
+
+    // 定期刷新设置
     const interval = setInterval(fetchSettings, 30000)
-    return () => clearInterval(interval)
+
+    // 页面可见性变化时刷新设置
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSettings()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [fetchSettings])
 
   return (

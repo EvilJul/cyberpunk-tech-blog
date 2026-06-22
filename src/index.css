@@ -28,37 +28,39 @@
   --animate-pulse-slow: pulse 3s ease-in-out infinite;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+@layer base {
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
 
-@keyframes glow {
-  0% { box-shadow: 0 0 5px var(--theme-accent-glow, rgba(255, 215, 0, 0.2)); }
-  100% { box-shadow: 0 0 20px var(--theme-accent-glow, rgba(255, 215, 0, 0.4)); }
-}
+  @keyframes glow {
+    0% { box-shadow: 0 0 5px var(--theme-accent-glow, rgba(255, 215, 0, 0.2)); }
+    100% { box-shadow: 0 0 20px var(--theme-accent-glow, rgba(255, 215, 0, 0.4)); }
+  }
 
-@keyframes slideUp {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
+  @keyframes slideUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
 
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
 
-body {
-  background-color: var(--theme-background, #0a0a0f);
-  color: var(--theme-text-primary, #ffffff);
-  font-family: var(--font-body, 'Inter', 'Noto Sans SC', system-ui, sans-serif);
-  scroll-behavior: smooth;
-  min-height: 100vh;
+  body {
+    background-color: transparent;
+    color: var(--theme-text-primary, #ffffff);
+    font-family: var(--font-body, 'Inter', 'Noto Sans SC', system-ui, sans-serif);
+    scroll-behavior: smooth;
+    min-height: 100vh;
+  }
 }
 
 body::before {

@@ -35,8 +35,7 @@ export default function SplashCursor() {
     }
 
     const animate = () => {
-      ctx.fillStyle = 'rgba(10, 10, 15, 0.15)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
@@ -52,6 +51,11 @@ export default function SplashCursor() {
         ctx.beginPath()
         ctx.arc(p.x, p.y, 2 * p.life, 0, Math.PI * 2)
         ctx.fillStyle = p.color.replace('0.4', String(p.life * 0.3))
+        ctx.fill()
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 6 * p.life, 0, Math.PI * 2)
+        ctx.fillStyle = `hsla(50, 100%, 50%, ${p.life * 0.08})`
         ctx.fill()
       }
 

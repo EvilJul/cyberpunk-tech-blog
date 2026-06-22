@@ -94,18 +94,18 @@ body::after {
 .glass-card {
   background: linear-gradient(
     135deg,
-    rgba(32, 38, 72, 0.4) 0%,
-    rgba(20, 24, 55, 0.2) 50%,
-    rgba(32, 38, 72, 0.35) 100%
+    rgba(32, 38, 72, 0.25) 0%,
+    rgba(20, 24, 55, 0.12) 50%,
+    rgba(32, 38, 72, 0.2) 100%
   );
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.08));
   border-radius: var(--radius-lg, 1rem);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
 }

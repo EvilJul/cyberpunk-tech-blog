@@ -1419,40 +1419,71 @@
             <!-- 背景图片 -->
             <div style="margin-bottom: 20px;">
               <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">背景图片</div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- 左侧：设置区域 -->
                 <div>
-                  <label style="font-size: 12px; color: #888;">图片地址</label>
-                  <div style="display: flex; gap: 6px; margin-top: 4px;">
-                    <input type="text" id="theme-bg-image" placeholder="https://example.com/bg.jpg" style="flex: 1;" onchange="updateThemeBg()">
-                    <button onclick="document.getElementById('theme-bg-file').click()" class="btn" style="padding: 4px 8px; margin: 0; font-size: 11px;">上传</button>
+                  <!-- 图片地址 -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片地址</label>
+                    <input type="text" id="theme-bg-image" placeholder="https://example.com/bg.jpg" style="width: 100%;" onchange="updateThemeBg()">
+                  </div>
+
+                  <!-- 上传按钮 -->
+                  <div style="margin-bottom: 12px;">
+                    <button onclick="document.getElementById('theme-bg-file').click()" class="btn" style="width: 100%; margin: 0;">上传图片</button>
                     <input type="file" id="theme-bg-file" accept="image/*" style="display: none;" onchange="handleBgImageUpload(event)">
                   </div>
+
+                  <!-- 图片大小 -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片大小</label>
+                    <select id="theme-bg-size" style="width: 100%;" onchange="updateThemeBg()">
+                      <option value="cover">cover（覆盖）</option>
+                      <option value="contain">contain（包含）</option>
+                      <option value="auto">auto（自动）</option>
+                      <option value="100%">100%（拉伸）</option>
+                    </select>
+                  </div>
+
+                  <!-- 图片位置 -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片位置</label>
+                    <select id="theme-bg-position" style="width: 100%;" onchange="updateThemeBg()">
+                      <option value="center">居中</option>
+                      <option value="top">顶部</option>
+                      <option value="bottom">底部</option>
+                      <option value="left">左侧</option>
+                      <option value="right">右侧</option>
+                      <option value="top left">左上</option>
+                      <option value="top right">右上</option>
+                      <option value="bottom left">左下</option>
+                      <option value="bottom right">右下</option>
+                    </select>
+                  </div>
+
+                  <!-- 遮罩透明度 -->
+                  <div>
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">遮罩透明度 <span id="theme-bg-overlay-val" style="color: #ffd700;">0.7</span></label>
+                    <input type="range" id="theme-bg-overlay" min="0" max="1" step="0.05" value="0.7" style="width: 100%; accent-color: #ffd700;" onchange="document.getElementById('theme-bg-overlay-val').textContent = this.value; updateThemeBg();">
+                  </div>
                 </div>
+
+                <!-- 右侧：预览区域 -->
                 <div>
-                  <label style="font-size: 12px; color: #888;">图片大小</label>
-                  <select id="theme-bg-size" style="width: 100%; margin-top: 4px;" onchange="updateThemeBg()">
-                    <option value="cover">cover（覆盖）</option>
-                    <option value="contain">contain（包含）</option>
-                    <option value="auto">auto（自动）</option>
-                    <option value="100%">100%（拉伸）</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size: 12px; color: #888;">图片位置</label>
-                  <select id="theme-bg-position" style="width: 100%; margin-top: 4px;" onchange="updateThemeBg()">
-                    <option value="center">居中</option>
-                    <option value="top">顶部</option>
-                    <option value="bottom">底部</option>
-                    <option value="left">左侧</option>
-                    <option value="right">右侧</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size: 12px; color: #888;">遮罩透明度 (<span id="theme-bg-overlay-val">0.7</span>)</label>
-                  <input type="range" id="theme-bg-overlay" min="0" max="1" step="0.05" value="0.7" style="width: 100%; margin-top: 4px; accent-color: var(--theme-primary, #ffd700);" onchange="document.getElementById('theme-bg-overlay-val').textContent = this.value; updateThemeBg();">
+                  <div style="font-size: 12px; color: #888; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>预览效果</span>
+                    <span id="image-dimensions" style="color: #ffd700; font-size: 11px;"></span>
+                  </div>
+                  <div id="theme-bg-preview" style="height: 100%; min-height: 300px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: none; background-size: contain; background-position: center; background-repeat: no-repeat; background-color: rgba(0,0,0,0.3); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #ffd700; padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255,215,0,0.3);">实际预览</div>
+                    <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: #aaa; padding: 4px 8px; border-radius: 4px; font-size: 10px;">contain 模式完整显示</div>
+                  </div>
+                  <div id="theme-bg-placeholder" style="height: 100%; min-height: 300px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; color: #555; font-size: 13px;">
+                    暂无背景图片
+                  </div>
                 </div>
               </div>
-              <div id="theme-bg-preview" style="margin-top: 12px; height: 60px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: none; background-size: cover; background-position: center;"></div>
             </div>
 
             <!-- 圆角配置 -->
@@ -1893,13 +1924,13 @@
       document.getElementById('image-file-input').click();
     }
 
-    async function uploadImage(file, insertMarkdown = true) {
+    async function uploadImage(file, insertMarkdown = true, imageType = 'normal') {
       const formData = new FormData();
       formData.append('image', file);
 
       // 直接发送到后端服务器（绕过代理，因为需要 multipart/form-data）
       try {
-        const res = await fetch('http://localhost:9098/api/upload', {
+        const res = await fetch(`/api/upload?type=${imageType}`, {
           method: 'POST',
           headers: {
             'Authorization': 'Basic ' + btoa('admin:admin123')
@@ -1914,7 +1945,7 @@
 
         const data = await res.json();
         if (data.url) {
-          // 仅在需要时插入 Markdown 到编辑器（头像上传不需要）
+          // 仅在需要时插入 Markdown 到编辑器（头像和背景上传不需要）
           if (insertMarkdown) {
             const ta = document.getElementById('article-content');
             if (ta) {
@@ -1934,8 +1965,12 @@
       }
     }
 
-    // 图片粘贴支持
-    document.addEventListener('DOMContentLoaded', () => {
+    // 图片粘贴和拖拽上传绑定
+    let pasteBound = false;
+    function bindUploadHandlers() {
+      if (pasteBound) return;
+      pasteBound = true;
+
       const ta = document.getElementById('article-content');
       if (ta) {
         ta.addEventListener('paste', async (e) => {
@@ -1946,7 +1981,6 @@
               e.preventDefault();
               const file = item.getAsFile();
               if (file) {
-                alert('正在上传图片...');
                 await uploadImage(file);
               }
               return;
@@ -1955,7 +1989,6 @@
         });
       }
 
-      // 图片拖拽上传
       const dropZone = document.getElementById('image-drop-zone');
       const fileInput = document.getElementById('image-file-input');
       if (dropZone) {
@@ -1987,7 +2020,7 @@
           fileInput.value = '';
         });
       }
-    });
+    }
 
     // 弹窗控制
     function showModal(modalId) {
@@ -2033,16 +2066,21 @@
       `).join('');
     }
 
-    function showArticleEditor(id = null) {
+    async function showArticleEditor(id = null) {
       currentEditId = id;
       if (id) {
-        const article = articles.find(a => a.id === id);
-        if (article) {
-          document.getElementById('article-title').value = article.title || '';
-          document.getElementById('article-slug').value = article.slug || '';
-          document.getElementById('article-tags').value = (article.tags || []).join(', ');
-          document.getElementById('article-content').value = article.content || '';
-          document.getElementById('article-author').value = article.author || '';
+        try {
+          const res = await fetch(`/api/articles/by-id/${id}`, { headers: getAuthHeaders() });
+          if (res.ok) {
+            const article = await res.json();
+            document.getElementById('article-title').value = article.title || '';
+            document.getElementById('article-slug').value = article.slug || '';
+            document.getElementById('article-tags').value = (article.tags || []).join(', ');
+            document.getElementById('article-content').value = article.content || '';
+            document.getElementById('article-author').value = article.author || '';
+          }
+        } catch (e) {
+          console.error('获取文章详情失败:', e);
         }
         document.getElementById('article-modal-title').textContent = '编辑文章';
       } else {
@@ -2054,10 +2092,62 @@
         document.getElementById('article-modal-title').textContent = '新建文章';
       }
       showModal('article-modal');
+      bindUploadHandlers();
+      bindDraftAutosave();
     }
 
     function editArticle(id) {
       showArticleEditor(id);
+    }
+
+    // 文章暂存功能
+    let draftTimer = null;
+    function bindDraftAutosave() {
+      const contentEl = document.getElementById('article-content');
+      const titleEl = document.getElementById('article-title');
+      if (!contentEl) return;
+
+      const draftKey = currentEditId ? `article-draft-${currentEditId}` : 'article-draft-new';
+
+      // 检查是否有暂存内容
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        try {
+          const draft = JSON.parse(saved);
+          if (draft.content && draft.content !== contentEl.value) {
+            if (confirm('发现未保存的暂存内容，是否恢复？')) {
+              contentEl.value = draft.content || '';
+              if (draft.title) titleEl.value = draft.title;
+              if (draft.tags) document.getElementById('article-tags').value = draft.tags;
+              if (draft.author) document.getElementById('article-author').value = draft.author;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 自动暂存（防抖 1 秒）
+      const autoSave = () => {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(() => {
+          const draft = {
+            title: titleEl.value,
+            content: contentEl.value,
+            tags: document.getElementById('article-tags').value,
+            author: document.getElementById('article-author').value,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(draftKey, JSON.stringify(draft));
+        }, 1000);
+      };
+
+      contentEl.removeEventListener('input', autoSave);
+      contentEl.addEventListener('input', autoSave);
+      titleEl.removeEventListener('input', autoSave);
+      titleEl.addEventListener('input', autoSave);
+    }
+
+    function clearDraft(id) {
+      localStorage.removeItem(id ? `article-draft-${id}` : 'article-draft-new');
     }
 
     async function saveArticle() {
@@ -2083,6 +2173,7 @@
       });
 
       closeModal('article-modal');
+      clearDraft(currentEditId);
       loadArticles();
       loadStats();
     }
@@ -2090,6 +2181,7 @@
     async function deleteArticle(id) {
       if (confirm('确定删除这篇文章？')) {
         await fetch(`/api/articles/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+        clearDraft(id);
         loadArticles();
         loadStats();
       }
@@ -2475,7 +2567,7 @@
         statusEl.style.color = '#ffd700';
 
         try {
-          const url = await uploadImage(file, false);
+          const url = await uploadImage(file, false, 'avatar');
           settings.avatar = url;
           const preview = document.getElementById('avatar-preview');
           preview.src = url;
@@ -2570,13 +2662,45 @@
         document.getElementById('theme-bg-overlay-val').textContent = theme.background.overlay || 0.7;
 
         const bgPreview = document.getElementById('theme-bg-preview');
+        const bgPlaceholder = document.getElementById('theme-bg-placeholder');
+        const imageDimensions = document.getElementById('image-dimensions');
+
         if (theme.background.image) {
           bgPreview.style.display = 'block';
+          bgPlaceholder.style.display = 'none';
           bgPreview.style.backgroundImage = `url(${theme.background.image})`;
           bgPreview.style.backgroundSize = theme.background.size || 'cover';
           bgPreview.style.backgroundPosition = theme.background.position || 'center';
+          bgPreview.style.backgroundRepeat = 'no-repeat';
+
+          // 加载图片获取实际尺寸
+          const img = new Image();
+          img.onload = function() {
+            const sizeKB = Math.round(this.naturalWidth * this.naturalHeight * 3 / 1024);
+            imageDimensions.textContent = `原始尺寸: ${this.naturalWidth} × ${this.naturalHeight} px (~${sizeKB} KB)`;
+          };
+          img.onerror = function() {
+            imageDimensions.textContent = '图片加载失败';
+          };
+          img.src = theme.background.image;
+
+          // 创建或更新遮罩层
+          let overlay = bgPreview.querySelector('.preview-overlay');
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'preview-overlay';
+            overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; pointer-events: none; z-index: 1;';
+            bgPreview.insertBefore(overlay, bgPreview.firstChild);
+          }
+          overlay.style.opacity = theme.background.overlay || 0.7;
+
+          // 确保标签在最上层
+          const labels = bgPreview.querySelectorAll('div:not(.preview-overlay)');
+          labels.forEach(label => label.style.zIndex = '2');
         } else {
           bgPreview.style.display = 'none';
+          bgPlaceholder.style.display = 'flex';
+          imageDimensions.textContent = '';
         }
       }
 
@@ -2687,13 +2811,45 @@
       };
 
       const bgPreview = document.getElementById('theme-bg-preview');
+      const bgPlaceholder = document.getElementById('theme-bg-placeholder');
+      const imageDimensions = document.getElementById('image-dimensions');
+
       if (currentTheme.background.image) {
         bgPreview.style.display = 'block';
+        bgPlaceholder.style.display = 'none';
         bgPreview.style.backgroundImage = `url(${currentTheme.background.image})`;
         bgPreview.style.backgroundSize = currentTheme.background.size;
         bgPreview.style.backgroundPosition = currentTheme.background.position;
+        bgPreview.style.backgroundRepeat = 'no-repeat';
+
+        // 加载图片获取实际尺寸
+        const img = new Image();
+        img.onload = function() {
+          const sizeKB = Math.round(this.naturalWidth * this.naturalHeight * 3 / 1024);
+          imageDimensions.textContent = `原始尺寸: ${this.naturalWidth} × ${this.naturalHeight} px (~${sizeKB} KB)`;
+        };
+        img.onerror = function() {
+          imageDimensions.textContent = '图片加载失败';
+        };
+        img.src = currentTheme.background.image;
+
+        // 更新遮罩层
+        let overlay = bgPreview.querySelector('.preview-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.className = 'preview-overlay';
+          overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; pointer-events: none; z-index: 1;';
+          bgPreview.insertBefore(overlay, bgPreview.firstChild);
+        }
+        overlay.style.opacity = currentTheme.background.overlay;
+
+        // 确保标签在最上层
+        const labels = bgPreview.querySelectorAll('div:not(.preview-overlay)');
+        labels.forEach(label => label.style.zIndex = '2');
       } else {
         bgPreview.style.display = 'none';
+        bgPlaceholder.style.display = 'flex';
+        imageDimensions.textContent = '';
       }
       autoSave();
     }
@@ -2704,7 +2860,7 @@
       if (!file) return;
 
       try {
-        const url = await uploadImage(file, false);
+        const url = await uploadImage(file, false, 'background');
         document.getElementById('theme-bg-image').value = url;
         updateThemeBg();
       } catch (e) {

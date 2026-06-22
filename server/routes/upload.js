@@ -43,16 +43,46 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: '没有上传文件' })
     }
 
+    // 从请求参数中获取图片类型，默认为普通图片
+    const imageType = req.query.type || req.body.type || 'normal'
+
     const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
     const filepath = join(uploadDir, filename)
 
-    await sharp(req.file.buffer)
-      .resize(800, 800, {
+    // 根据图片类型设置不同的处理参数
+    let resizeOptions, quality
+
+    if (imageType === 'background') {
+      // 背景图片：保持原始尺寸，最大宽度 2560px
+      resizeOptions = {
+        width: 2560,
+        fit: 'inside',
+        withoutEnlargement: true
+      }
+      quality = 85
+    } else if (imageType === 'avatar') {
+      // 头像：裁剪为正方形
+      resizeOptions = {
+        width: 400,
+        height: 400,
         fit: 'cover',
         position: 'centre',
         withoutEnlargement: true
-      })
-      .jpeg({ quality: 75, mozjpeg: true })
+      }
+      quality = 80
+    } else {
+      // 普通图片（文章配图）：限制宽度
+      resizeOptions = {
+        width: 1200,
+        fit: 'inside',
+        withoutEnlargement: true
+      }
+      quality = 75
+    }
+
+    await sharp(req.file.buffer)
+      .resize(resizeOptions)
+      .jpeg({ quality, mozjpeg: true })
       .toFile(filepath)
 
     res.json({ success: true, url: `/uploads/${filename}` })

@@ -4,22 +4,43 @@ import CommentSection from './CommentSection'
 import { useSettings } from '../../contexts/SettingsContext'
 
 export default function ArticleDetail({ article, onBack }) {
+  const [fullArticle, setFullArticle] = useState(article)
+  const [loading, setLoading] = useState(!article.content)
   const [views, setViews] = useState(0)
   const [likes, setLikes] = useState(0)
   const [isLiked, setIsLiked] = useState(false)
   const { settings } = useSettings()
 
   useEffect(() => {
-    fetch(`/api/stats/article/${article.id}/views`, { method: 'POST' })
+    if (!article.content && article.slug) {
+      fetch(`/api/articles/${article.slug}`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
+        })
+        .then(data => {
+          setFullArticle(data)
+          setLoading(false)
+        })
+        .catch(err => {
+          console.error('获取文章详情失败:', err)
+          setLoading(false)
+        })
+    }
+  }, [article.slug, article.content])
+
+  useEffect(() => {
+    const id = fullArticle.id || article.id
+    fetch(`/api/stats/article/${id}/views`, { method: 'POST' })
       .then(res => res.json())
       .then(data => setViews(data.views))
       .catch(() => {})
 
-    fetch(`/api/stats/article/${article.id}/likes`)
+    fetch(`/api/stats/article/${id}/likes`)
       .then(res => res.json())
       .then(data => setLikes(data.likes))
       .catch(() => {})
-  }, [article.id])
+  }, [fullArticle.id, article.id])
 
   const handleLike = async () => {
     if (!isLiked) {
@@ -54,6 +75,10 @@ export default function ArticleDetail({ article, onBack }) {
       }
       if (line.trim() === '') {
         return <br key={uniqueKey} />
+      }
+      const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+      if (imgMatch) {
+        return <img key={uniqueKey} src={imgMatch[2]} alt={imgMatch[1]} className="max-w-full rounded-lg my-4" />
       }
       return <p key={uniqueKey} className="text-dark-200 mb-3 leading-relaxed">{line}</p>
     })
@@ -121,7 +146,13 @@ export default function ArticleDetail({ article, onBack }) {
 
         <div className="glass-card p-6 md:p-8 mb-8">
           <div className="prose prose-invert max-w-none">
-            {renderContent(article.content)}
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
+              </div>
+            ) : (
+              renderContent(fullArticle.content)
+            )}
           </div>
         </div>
 

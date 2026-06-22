@@ -72,6 +72,22 @@ router.get('/stats/summary', async (req, res, next) => {
   }
 })
 
+// 根据 ID 获取文章（必须在 /:slug 之前）
+router.get('/by-id/:id', async (req, res, next) => {
+  try {
+    const article = ArticleDAO.findById(req.params.id)
+
+    if (!article) {
+      return res.status(404).json({ error: '文章未找到' })
+    }
+
+    logger.info('查询文章详情', { id: req.params.id })
+    res.json(article)
+  } catch (error) {
+    next(error)
+  }
+})
+
 // 根据 slug 获取文章
 router.get('/:slug', async (req, res, next) => {
   try {

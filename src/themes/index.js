@@ -4,6 +4,13 @@ export const themes = {
     id: 'cyberpunk',
     name: '暗金赛博朋克',
     description: '深邃太空黑 + Indigo/Violet 霓虹',
+    background: {
+      image: '',
+      size: 'cover',
+      position: 'center',
+      repeat: 'no-repeat',
+      overlay: 0.7
+    },
     colors: {
       // 背景色系
       background: '#0a0a0f',
@@ -70,6 +77,13 @@ export const themes = {
     id: 'minimal',
     name: '极简白',
     description: '纯净简约的浅色主题',
+    background: {
+      image: '',
+      size: 'cover',
+      position: 'center',
+      repeat: 'no-repeat',
+      overlay: 0.9
+    },
     colors: {
       background: '#ffffff',
       surface: '#f8f9fa',
@@ -125,6 +139,13 @@ export const themes = {
     id: 'dark',
     name: '暗色',
     description: '经典深色主题',
+    background: {
+      image: '',
+      size: 'cover',
+      position: 'center',
+      repeat: 'no-repeat',
+      overlay: 0.8
+    },
     colors: {
       background: '#1a1a1a',
       surface: '#2d2d2d',

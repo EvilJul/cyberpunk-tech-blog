@@ -47,7 +47,15 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
         params.append('search', searchQuery.trim())
       }
 
-      const res = await fetch(`/api/articles?${params}`)
+      const url = `/api/articles?${params}`
+      logger.info('正在获取文章', { url, page })
+
+      const res = await fetch(url)
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+
       const data = await res.json()
 
       logger.info('获取文章成功', { total: data.pagination?.total || data.length })
@@ -69,7 +77,15 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
 
       setLoading(false)
     } catch (err) {
-      logger.error('获取文章失败', { error: err.message })
+      logger.error('获取文章失败', { error: err.message, stack: err.stack })
+      console.error('获取文章详细错误:', err)
+      setArticles([])
+      setPagination({
+        page: 1,
+        per_page: perPage,
+        total: 0,
+        total_pages: 0
+      })
       setLoading(false)
     }
   }
@@ -77,7 +93,16 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
   useEffect(() => {
     logger.info('ArticleList 组件已挂载')
     // 获取分类
-    fetch('/api/categories').then(res => res.json()).then(setCategories).catch(console.error)
+    fetch('/api/categories')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(setCategories)
+      .catch(err => {
+        logger.error('获取分类失败', { error: err.message })
+        console.error('获取分类详细错误:', err)
+      })
   }, [])
 
   useEffect(() => {

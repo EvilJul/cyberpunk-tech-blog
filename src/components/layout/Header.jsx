@@ -33,7 +33,7 @@ export default function Header({ onNavigate, currentView }) {
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-      scrolled ? 'bg-dark-950/95 backdrop-blur-xl shadow-lg shadow-black/30 border-b border-dark-700/30' : 'bg-dark-950/80 backdrop-blur-sm'
+      scrolled ? 'bg-dark-950/98 backdrop-blur-2xl shadow-lg shadow-black/40 border-b border-dark-700/30' : 'bg-dark-950/90 backdrop-blur-xl'
     }`}>
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div 

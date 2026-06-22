@@ -10,29 +10,41 @@ export default function Sidebar() {
 
   useEffect(() => {
     fetch('/api/stats/views')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
       .then(data => setStats(prev => ({ ...prev, views: data.views })))
-      .catch(() => {})
+      .catch(err => console.error('获取访问统计失败:', err))
 
     fetch('/api/articles')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
       .then(data => {
-        const articles = Array.isArray(data) ? data : (data.articles || [])
+        const articles = Array.isArray(data) ? data : (data.data || data.articles || [])
         setStats(prev => ({ ...prev, articleCount: articles.length }))
       })
-      .catch(() => {})
+      .catch(err => console.error('获取文章统计失败:', err))
 
     fetch('/api/categories')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
       .then(data => {
         const cats = Array.isArray(data) ? data : (data.categories || [])
         const catCountMap = {}
         cats.forEach(c => catCountMap[c.name] = 0)
-        
+
         fetch('/api/articles')
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return res.json()
+          })
           .then(articlesData => {
-            const articles = Array.isArray(articlesData) ? articlesData : (articlesData.articles || [])
+            const articles = Array.isArray(articlesData) ? articlesData : (articlesData.data || articlesData.articles || [])
             articles.forEach(article => {
               const cat = article.category || '未分类'
               if (catCountMap[cat] !== undefined) {
@@ -45,15 +57,18 @@ export default function Sidebar() {
           })
           .catch(() => setCategories(cats))
       })
-      .catch(() => {})
+      .catch(err => console.error('获取分类失败:', err))
 
     fetch('/api/tags')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
       .then(data => {
         const tagList = Array.isArray(data) ? data : (data.tags || [])
         setTags(tagList.map(t => t.name))
       })
-      .catch(() => {})
+      .catch(err => console.error('获取标签失败:', err))
   }, [])
 
   return (

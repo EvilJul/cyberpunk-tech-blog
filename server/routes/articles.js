@@ -17,6 +17,7 @@ router.get('/', async (req, res, next) => {
       category,
       tag,
       search,
+      status,
       sort = 'publish_date',
       order = 'desc'
     } = req.query
@@ -27,6 +28,7 @@ router.get('/', async (req, res, next) => {
       category,
       tag,
       search,
+      status,
       sort,
       order
     })
@@ -88,12 +90,17 @@ router.get('/by-id/:id', async (req, res, next) => {
   }
 })
 
-// 根据 slug 获取文章
+// 根据 slug 获取文章（仅已发布）
 router.get('/:slug', async (req, res, next) => {
   try {
     const article = ArticleDAO.findBySlug(req.params.slug)
 
     if (!article) {
+      return res.status(404).json({ error: '文章未找到' })
+    }
+
+    // 公共访问只允许已发布文章
+    if (article.status !== 'published') {
       return res.status(404).json({ error: '文章未找到' })
     }
 
@@ -107,7 +114,7 @@ router.get('/:slug', async (req, res, next) => {
 // 创建文章
 router.post('/', async (req, res, next) => {
   try {
-    const { title, slug, content, category, tags, excerpt, author } = req.body
+    const { title, slug, content, category, tags, excerpt, author, status } = req.body
 
     if (!title) {
       return res.status(400).json({ error: '文章标题不能为空' })
@@ -133,11 +140,12 @@ router.post('/', async (req, res, next) => {
       author: author || '博主',
       categoryId,
       tags: tags || [],
-      publishDate: new Date().toISOString().split('T')[0],
+      status: status || 'draft',
+      publishDate: status === 'published' ? new Date().toISOString().split('T')[0] : null,
       updateDate: new Date().toISOString().split('T')[0]
     })
 
-    logger.info('创建文章', { id: article.id, title: article.title })
+    logger.info('创建文章', { id: article.id, title: article.title, status: article.status })
     res.status(201).json(article)
   } catch (error) {
     next(error)
@@ -147,7 +155,7 @@ router.post('/', async (req, res, next) => {
 // 更新文章
 router.put('/:id', async (req, res, next) => {
   try {
-    const { title, slug, content, category, tags, excerpt, author } = req.body
+    const { title, slug, content, category, tags, excerpt, author, status } = req.body
 
     // 查找或创建分类
     let categoryId = undefined
@@ -172,6 +180,16 @@ router.put('/:id', async (req, res, next) => {
     if (author !== undefined) updates.author = author
     if (categoryId !== undefined) updates.categoryId = categoryId
     if (tags !== undefined) updates.tags = tags
+    if (status !== undefined) {
+      updates.status = status
+      // 状态变为published时设置publishDate
+      if (status === 'published') {
+        const existing = ArticleDAO.findById(req.params.id)
+        if (existing && !existing.publish_date) {
+          updates.publishDate = new Date().toISOString().split('T')[0]
+        }
+      }
+    }
 
     updates.updateDate = new Date().toISOString().split('T')[0]
 
@@ -181,7 +199,7 @@ router.put('/:id', async (req, res, next) => {
       return res.status(404).json({ error: '文章未找到' })
     }
 
-    logger.info('更新文章', { id: req.params.id })
+    logger.info('更新文章', { id: req.params.id, status: updates.status })
     res.json(article)
   } catch (error) {
     next(error)

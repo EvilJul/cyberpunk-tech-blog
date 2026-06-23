@@ -144,7 +144,7 @@ export default function ArticleDetail({ article, onBack }) {
           )}
         </header>
 
-        <div className="glass-card p-6 md:p-8 mb-8">
+        <div className="mb-8">
           <div className="prose prose-invert max-w-none">
             {loading ? (
               <div className="flex justify-center py-8">

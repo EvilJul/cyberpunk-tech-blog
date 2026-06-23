@@ -36,7 +36,8 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
         page,
         per_page: perPage,
         sort: 'publish_date',
-        order: 'desc'
+        order: 'desc',
+        status: 'published'
       })
 
       if (selectedCategory) {

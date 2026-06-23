@@ -507,6 +507,113 @@
     .image-upload-zone.dragover {
       border-color: rgba(255, 215, 0, 0.4);
       background: rgba(255, 215, 0, 0.05);
+    }
+
+    /* 全屏文章编辑器 */
+    .editor-page {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 2000;
+      background: linear-gradient(135deg, rgba(20, 24, 55, 1) 0%, rgba(10, 12, 30, 1) 100%);
+      flex-direction: column;
+      animation: fadeIn 0.2s ease;
+    }
+    .editor-page.active { display: flex; }
+
+    .editor-topbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    .editor-title-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      padding: 4px 0;
+    }
+    .editor-title-input::placeholder { color: #4a5568; }
+    .editor-topbar-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+    .editor-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 16px 24px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .editor-meta-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .editor-meta-field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .editor-meta input, .editor-meta select {
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .editor-meta input:focus, .editor-meta select:focus {
+      border-color: rgba(255,215,0,0.5);
+    }
+    .editor-meta input::placeholder { color: #64748b; }
+    .editor-meta select option { background: #1a1f3a; color: #e2e8f0; }
+
+    .editor-page .editor-toolbar {
+      margin: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .editor-content-area {
+      flex: 1;
+      display: flex;
+      padding: 0 24px;
+      min-height: 0;
+    }
+    .editor-content-area textarea {
+      flex: 1;
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 16px;
+      color: #e2e8f0;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .editor-content-area textarea:focus {
+      border-color: rgba(255,215,0,0.4);
+    }
+
+    .editor-bottombar {
+      padding: 12px 24px;
+      flex-shrink: 0;
+    }
+    .editor-bottombar .image-upload-zone { margin: 0; }
       color: #ffd700;
     }
     
@@ -927,6 +1034,7 @@
               <thead>
                 <tr>
                   <th>标题</th>
+                  <th>状态</th>
                   <th>分类</th>
                   <th>标签</th>
                   <th>发布日期</th>
@@ -1132,6 +1240,7 @@
               <select id="setting-sidebar" style="width: 120px; margin: 0;">
                 <option value="right" selected>右侧</option>
                 <option value="left">左侧</option>
+                <option value="hidden">隐藏</option>
               </select>
             </div>
           </div>
@@ -1534,50 +1643,68 @@
     </div>
   </div>
 
-  <!-- 文章编辑器 -->
-  <div id="article-modal" class="modal">
-    <div class="modal-content modal-fullscreen">
-      <div class="modal-header">
-        <h3 id="article-modal-title" class="modal-title">新建文章</h3>
-        <button class="modal-close" onclick="closeModal('article-modal')">&times;</button>
+  <!-- 文章编辑器 - 全屏页面 -->
+  <div id="article-editor" class="editor-page">
+    <div class="editor-topbar">
+      <button class="btn btn-secondary" onclick="closeArticleEditor()">
+        <span style="font-size: 18px;">&larr;</span> 返回
+      </button>
+      <input id="article-title" class="editor-title-input" placeholder="文章标题">
+      <div class="editor-topbar-actions">
+        <button class="btn btn-secondary" onclick="saveArticle('draft')">暂存</button>
+        <button class="btn btn-primary" onclick="saveArticle('published')">发布文章</button>
       </div>
-      <div class="editor-body">
-        <div class="editor-row">
-          <input id="article-title" placeholder="文章标题" style="margin: 0;">
-          <input id="article-slug" placeholder="URL别名（可选，自动生成）" style="margin: 0;">
-        </div>
-        <div class="editor-row-3">
-          <select id="article-category" style="margin: 0;"></select>
-          <input id="article-tags" placeholder="标签（逗号分隔）" style="margin: 0;">
-          <input id="article-author" placeholder="作者" style="margin: 0;">
-        </div>
-        <div class="editor-toolbar">
-          <button onclick="insertMd('**', '**')" title="粗体">粗体</button>
-          <button onclick="insertMd('*', '*')" title="斜体">斜体</button>
-          <button onclick="insertMd('~~', '~~')" title="删除线">删除线</button>
-          <button onclick="insertMd('`', '`')" title="行内代码">代码</button>
-          <div class="separator"></div>
-          <button onclick="insertLine('# ')" title="一级标题">H1</button>
-          <button onclick="insertLine('## ')" title="二级标题">H2</button>
-          <button onclick="insertLine('### ')" title="三级标题">H3</button>
-          <div class="separator"></div>
-          <button onclick="insertLine('- ')" title="无序列表">列表</button>
-          <button onclick="insertLine('1. ')" title="有序列表">序号</button>
-          <button onclick="insertLine('> ')" title="引用">引用</button>
-          <button onclick="insertLine('---')" title="分割线">分割线</button>
-          <div class="separator"></div>
-          <button onclick="insertMd('[', '](url)')" title="链接">链接</button>
-          <button onclick="insertImage()" title="插入图片">图片</button>
-        </div>
-        <textarea id="article-content" placeholder="文章内容（支持 Markdown 语法，可直接粘贴图片）"></textarea>
-        <div class="image-upload-zone" id="image-drop-zone">
-          <input type="file" id="image-file-input" accept="image/*" multiple>
-          拖拽图片到此处，或点击选择文件，或直接在编辑器中 Ctrl+V 粘贴
-        </div>
+    </div>
+    <div class="editor-meta">
+      <div class="editor-meta-field">
+        <label>URL别名</label>
+        <input id="article-slug" placeholder="自动生成或手动输入">
       </div>
-      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 12px; flex-shrink: 0;">
-        <button class="btn btn-secondary" onclick="closeModal('article-modal')">取消</button>
-        <button class="btn btn-primary" onclick="saveArticle()">保存文章</button>
+      <div class="editor-meta-field">
+        <label>分类</label>
+        <select id="article-category"></select>
+      </div>
+      <div class="editor-meta-field">
+        <label>标签</label>
+        <input id="article-tags" placeholder="用逗号分隔多个标签">
+      </div>
+      <div class="editor-meta-field">
+        <label>作者</label>
+        <input id="article-author" placeholder="作者名称">
+      </div>
+      <div class="editor-meta-field">
+        <label>状态</label>
+        <select id="article-status">
+          <option value="draft">草稿</option>
+          <option value="published">已发布</option>
+        </select>
+      </div>
+    </div>
+    <div class="editor-toolbar">
+      <button onclick="insertMd('**', '**')" title="粗体">粗体</button>
+      <button onclick="insertMd('*', '*')" title="斜体">斜体</button>
+      <button onclick="insertMd('~~', '~~')" title="删除线">删除线</button>
+      <button onclick="insertMd('`', '`')" title="行内代码">代码</button>
+      <div class="separator"></div>
+      <button onclick="insertLine('# ')" title="一级标题">H1</button>
+      <button onclick="insertLine('## ')" title="二级标题">H2</button>
+      <button onclick="insertLine('### ')" title="三级标题">H3</button>
+      <div class="separator"></div>
+      <button onclick="insertLine('- ')" title="无序列表">列表</button>
+      <button onclick="insertLine('1. ')" title="有序列表">序号</button>
+      <button onclick="insertLine('> ')" title="引用">引用</button>
+      <button onclick="insertLine('---')" title="分割线">分割线</button>
+      <div class="separator"></div>
+      <button onclick="insertMd('[', '](url)')" title="链接">链接</button>
+      <button onclick="insertImage()" title="插入图片">图片</button>
+    </div>
+    <div class="editor-content-area">
+      <textarea id="article-content" placeholder="文章内容（支持 Markdown 语法，可直接粘贴图片）"></textarea>
+    </div>
+    <div class="editor-bottombar">
+      <div class="image-upload-zone" id="image-drop-zone">
+        <input type="file" id="image-file-input" accept="image/*" multiple>
+        拖拽图片到此处，或点击选择文件，或 Ctrl+V 粘贴
       </div>
     </div>
   </div>
@@ -1933,7 +2060,7 @@
         const res = await fetch(`/api/upload?type=${imageType}`, {
           method: 'POST',
           headers: {
-            'Authorization': 'Basic ' + btoa('admin:admin123')
+            'Authorization': getAuthHeaders().Authorization
           },
           body: formData
         });
@@ -2052,9 +2179,14 @@
       }
       
       emptyState.style.display = 'none';
-      tbody.innerHTML = articles.map(article => `
+      tbody.innerHTML = articles.map(article => {
+        const statusTag = article.status === 'published' 
+          ? '<span class="tag" style="background: #10b981; color: white;">已发布</span>'
+          : '<span class="tag tag-gray">草稿</span>';
+        return `
         <tr>
           <td><strong>${article.title}</strong></td>
+          <td>${statusTag}</td>
           <td><span class="tag">${article.category || '未分类'}</span></td>
           <td>${(article.tags || []).map(t => `<span class="tag tag-gray">${t}</span>`).join(' ')}</td>
           <td style="color: #64748b;">${article.publishDate || '-'}</td>
@@ -2063,7 +2195,8 @@
             <button class="btn btn-sm btn-danger" onclick="deleteArticle('${article.id}')">删除</button>
           </td>
         </tr>
-      `).join('');
+        `;
+      }).join('');
     }
 
     async function showArticleEditor(id = null) {
@@ -2078,22 +2211,28 @@
             document.getElementById('article-tags').value = (article.tags || []).join(', ');
             document.getElementById('article-content').value = article.content || '';
             document.getElementById('article-author').value = article.author || '';
+            document.getElementById('article-status').value = article.status || 'published';
           }
         } catch (e) {
           console.error('获取文章详情失败:', e);
         }
-        document.getElementById('article-modal-title').textContent = '编辑文章';
       } else {
         document.getElementById('article-title').value = '';
         document.getElementById('article-slug').value = '';
         document.getElementById('article-tags').value = '';
         document.getElementById('article-content').value = '';
         document.getElementById('article-author').value = settings.author || '';
-        document.getElementById('article-modal-title').textContent = '新建文章';
+        document.getElementById('article-status').value = 'draft';
       }
-      showModal('article-modal');
+      document.getElementById('article-editor').classList.add('active');
       bindUploadHandlers();
       bindDraftAutosave();
+    }
+
+    function closeArticleEditor() {
+      document.getElementById('article-editor').classList.remove('active');
+      clearDraft(currentEditId);
+      currentEditId = null;
     }
 
     function editArticle(id) {
@@ -2120,6 +2259,7 @@
               if (draft.title) titleEl.value = draft.title;
               if (draft.tags) document.getElementById('article-tags').value = draft.tags;
               if (draft.author) document.getElementById('article-author').value = draft.author;
+              if (draft.status) document.getElementById('article-status').value = draft.status;
             }
           }
         } catch (e) {}
@@ -2134,6 +2274,7 @@
             content: contentEl.value,
             tags: document.getElementById('article-tags').value,
             author: document.getElementById('article-author').value,
+            status: document.getElementById('article-status').value,
             timestamp: Date.now()
           };
           localStorage.setItem(draftKey, JSON.stringify(draft));
@@ -2150,7 +2291,8 @@
       localStorage.removeItem(id ? `article-draft-${id}` : 'article-draft-new');
     }
 
-    async function saveArticle() {
+    async function saveArticle(status) {
+      const articleStatus = status || document.getElementById('article-status').value || 'draft';
       const article = {
         title: document.getElementById('article-title').value,
         slug: document.getElementById('article-slug').value,
@@ -2158,7 +2300,8 @@
         tags: document.getElementById('article-tags').value.split(',').map(t => t.trim()).filter(t => t),
         content: document.getElementById('article-content').value,
         excerpt: document.getElementById('article-content').value.substring(0, settings.excerpt) + '...',
-        publishDate: new Date().toISOString().split('T')[0],
+        status: articleStatus,
+        publishDate: articleStatus === 'published' ? new Date().toISOString().split('T')[0] : null,
         updateDate: new Date().toISOString().split('T')[0],
         author: document.getElementById('article-author').value || settings.author
       };
@@ -2172,8 +2315,7 @@
         body: JSON.stringify(article)
       });
 
-      closeModal('article-modal');
-      clearDraft(currentEditId);
+      closeArticleEditor();
       loadArticles();
       loadStats();
     }

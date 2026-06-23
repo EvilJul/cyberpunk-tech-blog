@@ -10,10 +10,11 @@ export class ArticleDAO {
   static create(article) {
     const now = Date.now()
     const { categoryId, tags, ...articleData } = article
+    const status = articleData.status || 'draft'
 
     const stmt = db.prepare(`
-      INSERT INTO articles (id, title, slug, content, excerpt, author, category_id, publish_date, update_date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO articles (id, title, slug, content, excerpt, author, category_id, status, publish_date, update_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     const result = stmt.run(
@@ -24,6 +25,7 @@ export class ArticleDAO {
       articleData.excerpt || '',
       articleData.author || '博主',
       categoryId || null,
+      status,
       articleData.publishDate,
       articleData.updateDate,
       now,
@@ -77,10 +79,16 @@ export class ArticleDAO {
   /**
    * 分页查询文章
    */
-  static findAll({ page = 1, perPage = 10, category, tag, search, sort = 'publish_date', order = 'DESC' }) {
+  static findAll({ page = 1, perPage = 10, category, tag, search, status, sort = 'publish_date', order = 'DESC' }) {
     const offset = (page - 1) * perPage
     const params = []
     const whereConditions = []
+
+    // 状态筛选
+    if (status) {
+      whereConditions.push('a.status = ?')
+      params.push(status)
+    }
 
     // 分类筛选
     if (category) {
@@ -127,7 +135,7 @@ export class ArticleDAO {
     const orderDir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
 
     const stmt = db.prepare(`
-      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.publish_date, a.update_date, c.name as category,
+      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.status, a.publish_date, a.update_date, c.name as category,
              GROUP_CONCAT(t.name, ',') as tags_concat
       FROM articles a
       LEFT JOIN categories c ON a.category_id = c.id

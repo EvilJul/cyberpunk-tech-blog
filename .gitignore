@@ -20,6 +20,8 @@ server/data/*.db
 server/data/*.db-journal
 server/data/*.db-wal
 server/data/*.db-shm
+server/data/*.db.bak
+server/data/*.db.corrupted
 
 # User data (uploads, settings, backups)
 server/data/uploads/
@@ -39,6 +41,7 @@ Thumbs.db
 
 # gstack
 .gstack/
+.mimocode/
 
 # Temporary files
 tmp/

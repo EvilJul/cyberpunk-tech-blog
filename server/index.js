@@ -99,11 +99,8 @@ app.use('/api/stats', statsRouter)
 // 需要认证的 API
 app.use('/api/logs', authMiddleware, logsRouter)
 
-// Comments: GET 公开, POST 需要认证
-app.use('/api/comments', (req, res, next) => {
-  if (req.method === 'GET') return next()
-  authMiddleware(req, res, next)
-}, commentsRouter)
+// Comments: GET 公开, POST 公开（匿名评论）
+app.use('/api/comments', commentsRouter)
 
 // 管理员专用 API（需要认证 + 管理员权限）- 应用上传速率限制
 app.use('/api/upload', uploadLimiter, authMiddleware, adminOnly, uploadRouter)

@@ -72,6 +72,7 @@ export function initDatabase() {
       excerpt TEXT,
       author TEXT,
       category_id INTEGER,
+      status TEXT DEFAULT 'published',
       publish_date TEXT,
       update_date TEXT,
       created_at INTEGER NOT NULL,
@@ -83,6 +84,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);
     CREATE INDEX IF NOT EXISTS idx_articles_publish_date ON articles(publish_date);
   `)
+
+  // 数据库迁移：为已有文章添加 status 字段
+  const tableInfo = db.prepare("PRAGMA table_info(articles)").all()
+  if (!tableInfo.some(col => col.name === 'status')) {
+    logger.info('数据库迁移：为 articles 表添加 status 字段')
+    db.exec(`ALTER TABLE articles ADD COLUMN status TEXT DEFAULT 'published'`)
+  }
+
+  // 创建 status 索引（在迁移之后）
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status)`)
 
   // 文章标签关联表
   db.exec(`

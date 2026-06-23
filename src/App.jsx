@@ -49,6 +49,7 @@ function App() {
   }
 
   const isSidebarLeft = settings.sidebar === 'left'
+  const showSidebar = settings.sidebar !== 'hidden' && !selectedArticle
   const effects = theme?.effects || {}
 
   return (
@@ -72,9 +73,11 @@ function App() {
                 )}
               </div>
 
-              <div className="w-full lg:w-80 flex-shrink-0">
-                <Sidebar />
-              </div>
+              {showSidebar && (
+                <div className="w-full lg:w-80 flex-shrink-0">
+                  <Sidebar />
+                </div>
+              )}
             </div>
           </div>
         </main>

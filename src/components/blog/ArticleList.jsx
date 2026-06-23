@@ -5,20 +5,13 @@ import { useSettings } from '../../contexts/SettingsContext'
 import { Folder, X } from 'lucide-react'
 import { logger } from '../../utils/logger'
 
-function highlightMatch(text, query) {
-  if (!query.trim()) return text
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  const parts = text.split(regex)
-  return parts.map((part, i) =>
-    regex.test(part) ? <mark key={i} className="bg-gold/30 text-gold rounded px-0.5">{part}</mark> : part
-  )
-}
-
 export default function ArticleList({ onArticleClick, perPage = 10 }) {
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  const [isComposing, setIsComposing] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [pagination, setPagination] = useState({
     page: 1,
@@ -27,6 +20,19 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
     total_pages: 0
   })
   const { settings } = useSettings()
+
+  // 搜索防抖：500ms 延迟，清除时立即生效，输入法组合期间暂停
+  useEffect(() => {
+    if (isComposing) return
+    if (!searchQuery.trim()) {
+      setDebouncedSearchQuery('')
+      return
+    }
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchQuery, isComposing])
 
   // 获取文章列表
   const fetchArticles = async (page = 1) => {
@@ -44,8 +50,8 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
         params.append('category', selectedCategory)
       }
 
-      if (searchQuery.trim()) {
-        params.append('search', searchQuery.trim())
+      if (debouncedSearchQuery.trim()) {
+        params.append('search', debouncedSearchQuery.trim())
       }
 
       const url = `/api/articles?${params}`
@@ -108,7 +114,7 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
 
   useEffect(() => {
     fetchArticles(1)
-  }, [searchQuery, selectedCategory, perPage])
+  }, [debouncedSearchQuery, selectedCategory, perPage])
 
   const articleCategories = useMemo(() => {
     const catMap = {}
@@ -128,7 +134,7 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
 
   return (
     <div>
-      <SearchBar onSearch={setSearchQuery} />
+      <SearchBar onSearch={setSearchQuery} onComposingChange={setIsComposing} />
 
       {searchQuery && (
         <div className="mb-4 text-sm text-dark-400">

@@ -5,6 +5,18 @@ import db from './index.js'
  */
 export class ArticleDAO {
   /**
+   * 清理 FTS5 查询字符串，转义特殊字符
+   */
+  static sanitizeFtsQuery(query) {
+    // 移除 FTS5 特殊字符: " ' * ( ) : ^ ~
+    let sanitized = query.replace(/["'*:()^~\[\]]/g, ' ')
+    // 将连续空白压缩为单个空格
+    sanitized = sanitized.replace(/\s+/g, ' ').trim()
+    if (!sanitized) return ''
+    // 每个词加上后缀通配符 * 以支持部分匹配
+    return sanitized.split(' ').map(w => `"${w}"`).join(' OR ')
+  }
+  /**
    * 创建文章
    */
   static create(article) {
@@ -106,16 +118,15 @@ export class ArticleDAO {
       params.push(tag)
     }
 
-    // 搜索筛选
+    // 搜索筛选（使用 FTS5 全文搜索）
     if (search) {
-      whereConditions.push(`(
-        a.title LIKE ? OR
-        a.content LIKE ? OR
-        a.excerpt LIKE ? OR
-        c.name LIKE ?
-      )`)
-      const searchPattern = `%${search}%`
-      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
+      const ftsQuery = this.sanitizeFtsQuery(search)
+      if (ftsQuery) {
+        whereConditions.push(`a.rowid IN (
+          SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?
+        )`)
+        params.push(ftsQuery)
+      }
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''

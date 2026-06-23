@@ -1,26 +1,44 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 
-export default function SearchBar({ onSearch }) {
+export default function SearchBar({ onSearch, onComposingChange }) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef(null)
   const isComposing = useRef(false)
 
+  const handleClear = useCallback(() => {
+    setQuery('')
+    if (onSearch) {
+      onSearch('')
+    }
+    inputRef.current?.focus()
+  }, [onSearch])
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === '/' && !focused) {
+      if (e.key === '/' && !focused && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault()
         inputRef.current?.focus()
-      }
-      if (e.key === 'Escape') {
-        inputRef.current?.blur()
-        setFocused(false)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [focused])
+
+  const handleInputKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      if (query) {
+        e.preventDefault()
+        handleClear()
+      } else {
+        // query 可能因 React 状态不同步而为空，但 onSearch 仍需清空
+        if (onSearch) onSearch('')
+        inputRef.current?.blur()
+        setFocused(false)
+      }
+    }
+  }, [query, handleClear, onSearch])
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()
@@ -34,16 +52,16 @@ export default function SearchBar({ onSearch }) {
     }
   }, [onSearch])
 
+  const handleCompositionStart = useCallback(() => {
+    isComposing.current = true
+    if (onComposingChange) onComposingChange(true)
+  }, [onComposingChange])
+
   const handleCompositionEnd = useCallback((e) => {
     isComposing.current = false
+    if (onComposingChange) onComposingChange(false)
     if (onSearch) onSearch(e.target.value)
-  }, [onSearch])
-
-  const handleClear = useCallback(() => {
-    setQuery('')
-    if (onSearch) onSearch('')
-    inputRef.current?.focus()
-  }, [onSearch])
+  }, [onSearch, onComposingChange])
 
   return (
     <form onSubmit={handleSubmit} className="relative mb-6">
@@ -57,7 +75,8 @@ export default function SearchBar({ onSearch }) {
           placeholder="搜索文章... (按 / 聚焦)"
           value={query}
           onChange={handleChange}
-          onCompositionStart={() => { isComposing.current = true }}
+          onKeyDown={handleInputKeyDown}
+          onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

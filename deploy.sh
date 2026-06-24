@@ -33,7 +33,7 @@ echo "  服务器: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT"
 echo "  部署目录: $REMOTE_DIR"
 echo ""
 
-read -p "确认开始部署？[Y/n]: " CONFIRM
+read -rp "确认开始部署？[Y/n]: " CONFIRM
 [ "$CONFIRM" = "n" ] || [ "$CONFIRM" = "N" ] && echo "部署已取消" && exit 0
 
 echo ""
@@ -73,8 +73,14 @@ cd $RELEASE_DIR
 npm install
 
 # 构建前端（使用之前配置的 VITE_BASE_PATH）
-source .env 2>/dev/null || true
-VITE_BASE_PATH=\${VITE_BASE_PATH:-/} npm run build
+if [ ! -f ".env" ]; then
+    warning "未找到 .env 文件，使用默认 BASE_PATH=/"
+    VITE_BASE_PATH=/
+else
+    source .env 2>/dev/null || true
+    VITE_BASE_PATH=\${VITE_BASE_PATH:-/}
+fi
+VITE_BASE_PATH=$VITE_BASE_PATH npm run build
 
 # 安装生产依赖
 npm install --production

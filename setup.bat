@@ -2,6 +2,8 @@
 chcp 65001 >nul
 title Bolg 博客系统 - 一键部署脚本
 
+setlocal enabledelayedexpansion
+
 echo.
 echo ═══════════════════════════════════════════════════════════════
 echo            Bolg 博客系统 - Windows 一键部署脚本
@@ -60,7 +62,7 @@ if "%AUTH_METHOD%"=="" set AUTH_METHOD=1
 
 if "%AUTH_METHOD%"=="2" (
     set /p SSH_PASSWORD="SSH 密码: "
-    if "!SSH_PASSWORD!"=="" (
+    if "%SSH_PASSWORD%"=="" (
         echo [错误] 密码不能为空
         pause
         exit /b 1
@@ -205,6 +207,10 @@ echo.
 echo [信息] 开始部署...
 echo.
 
+REM 计算 RELEASE_DIR（用于 rsync/scp/ssh 命令）
+for /f "delims=" %%i in ('powershell -Command "[DateTime]::Now.ToString('yyyyMMdd_HHmmss')"') do set TIMESTAMP=%%i
+set RELEASE_DIR=%DEPLOY_DIR%/releases/%TIMESTAMP%
+
 REM 生成部署脚本
 echo [信息] 生成远程部署脚本...
 
@@ -219,8 +225,19 @@ echo mkdir -p %DEPLOY_DIR%/{releases,shared/data/uploads,shared/backups}
 echo.
 echo echo "安装 Node.js..."
 echo if ! command -v node ^&^> /dev/null; then
-echo     curl -fsSL https://deb.nodesource.com/setup_20.x ^| bash -
-echo     apt-get install -y nodejs
+echo     echo "安装 Node.js 20..."
+echo     if command -v apt-get ^&^> /dev/null; then
+echo         curl -fsSL https://deb.nodesource.com/setup_20.x ^| bash -
+echo         apt-get install -y nodejs
+echo     elif command -v dnf ^&^> /dev/null; then
+echo         dnf install -y nodejs
+echo     elif command -v yum ^&^> /dev/null; then
+echo         curl -fsSL https://rpm.nodesource.com/setup_20.x ^| bash -
+echo         yum install -y nodejs
+echo     else
+echo         echo "错误: 不支持的包管理器，请手动安装 Node.js 20+"
+echo         exit 1
+echo     fi
 echo fi
 echo.
 echo echo "安装依赖..."
@@ -280,8 +297,17 @@ echo.
 echo if [ "%ENABLE_NGINX%" != "n" ]; then
 echo     echo "配置 Nginx..."
 echo     if ! command -v nginx ^&^> /dev/null; then
-echo         apt-get update
-echo         apt-get install -y nginx
+echo         if command -v apt-get ^&^> /dev/null; then
+echo             apt-get update
+echo             apt-get install -y nginx
+echo         elif command -v dnf ^&^> /dev/null; then
+echo             dnf install -y nginx
+echo         elif command -v yum ^&^> /dev/null; then
+echo             yum install -y nginx
+echo         else
+echo             echo "错误: 不支持的包管理器，请手动安装 Nginx"
+echo             exit 1
+echo         fi
 echo     fi
 echo     cat > /etc/nginx/sites-available/bolg ^<^< NGINX_EOF
 echo     server {
@@ -295,7 +321,7 @@ echo             proxy_set_header X-Real-IP \$remote_addr;
 echo             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 echo             proxy_set_header X-Forwarded-Proto \$scheme;
 echo         }
-echo         location %BASE_PATH%admin/ {
+echo         location ^~ %BASE_PATH%admin/ {
 echo             proxy_pass http://127.0.0.1:%ADMIN_PORT%/admin/;
 echo             proxy_http_version 1.1;
 echo             proxy_set_header Host \$host;
@@ -314,9 +340,23 @@ echo     rm -f /etc/nginx/sites-enabled/default
 echo     nginx -t ^&^& systemctl reload nginx
 echo fi
 echo.
+echo if [ "%ENABLE_SSL%" != "n" ] && [ -n "%DOMAIN%" ]; then
+echo     echo "配置 SSL/HTTPS..."
+echo     if command -v apt-get ^&^> /dev/null; then
+echo         apt-get install -y certbot python3-certbot-nginx
+echo     elif command -v dnf ^&^> /dev/null; then
+echo         dnf install -y certbot python3-certbot-nginx
+echo     elif command -v yum ^&^> /dev/null; then
+echo         yum install -y certbot python3-certbot-nginx
+echo     fi
+echo     certbot --nginx -d %DOMAIN% --non-interactive --agree-tos --email %SSL_EMAIL%
+echo     systemctl enable certbot.timer
+echo     systemctl start certbot.timer
+echo fi
+echo.
 echo echo "初始化管理员..."
 echo cd %DEPLOY_DIR%/current
-echo node scripts/init-admin.js --username %ADMIN_USERNAME% --password "%ADMIN_PASSWORD%" --non-interactive
+echo ADMIN_PASSWORD="%ADMIN_PASSWORD%" node scripts/init-admin.js --username %ADMIN_USERNAME% --non-interactive
 echo.
 echo echo "部署完成！"
 ) > deploy_remote.sh
@@ -327,7 +367,7 @@ if "%AUTH_METHOD%"=="2" (
     echo [警告] Windows 下密码认证需要额外工具
     echo 请使用 SSH 密钥认证或手动执行部署
 ) else (
-    rsync -avz --delete --exclude="node_modules" --exclude=".git" --exclude="dist" --exclude="server/data" ./ -e "ssh -p %REMOTE_PORT% -i \"%SSH_KEY%\" -o StrictHostKeyChecking=no" %REMOTE_USER%@%REMOTE_HOST:%RELEASE_DIR%/
+    rsync -avz --exclude="node_modules" --exclude=".git" --exclude="dist" --exclude="server/data" ./ -e "ssh -p %REMOTE_PORT% -i \"%SSH_KEY%\" -o StrictHostKeyChecking=no" %REMOTE_USER%@%REMOTE_HOST:%RELEASE_DIR%/
     scp -P %REMOTE_PORT% -i "%SSH_KEY%" -o StrictHostKeyChecking=no deploy_remote.sh %REMOTE_USER%@%REMOTE_HOST:%RELEASE_DIR%/
     ssh -p %REMOTE_PORT% -i "%SSH_KEY%" -o StrictHostKeyChecking=no %REMOTE_USER%@%REMOTE_HOST% "chmod +x %RELEASE_DIR%/deploy_remote.sh && bash %RELEASE_DIR%/deploy_remote.sh"
 )

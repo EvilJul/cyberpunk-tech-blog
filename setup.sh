@@ -77,19 +77,19 @@ echo -e "${CYAN}  第一步：服务器连接配置${NC}"
 divider
 echo ""
 
-read -p "服务器 IP 地址: " REMOTE_HOST
+read -rp "服务器 IP 地址: " REMOTE_HOST
 [ -z "$REMOTE_HOST" ] && error "服务器 IP 不能为空"
 
-read -p "SSH 端口 [22]: " REMOTE_PORT
+read -rp "SSH 端口 [22]: " REMOTE_PORT
 REMOTE_PORT=${REMOTE_PORT:-22}
 
-read -p "SSH 用户名 [root]: " REMOTE_USER
+read -rp "SSH 用户名 [root]: " REMOTE_USER
 REMOTE_USER=${REMOTE_USER:-root}
 
 ask "选择认证方式："
 echo "  1) SSH 密钥认证（推荐）"
 echo "  2) 密码认证"
-read -p "请选择 [1]: " AUTH_METHOD
+read -rp "请选择 [1]: " AUTH_METHOD
 AUTH_METHOD=${AUTH_METHOD:-1}
 
 if [ "$AUTH_METHOD" = "2" ]; then
@@ -105,11 +105,11 @@ if [ "$AUTH_METHOD" = "2" ]; then
         fi
     fi
     
-    read -s -p "SSH 密码: " SSH_PASSWORD
+    read -srp "SSH 密码: " SSH_PASSWORD
     echo ""
     [ -z "$SSH_PASSWORD" ] && error "密码不能为空"
 else
-    read -p "SSH 密钥路径 [~/.ssh/id_rsa]: " SSH_KEY
+    read -rp "SSH 密钥路径 [~/.ssh/id_rsa]: " SSH_KEY
     SSH_KEY=${SSH_KEY:-~/.ssh/id_rsa}
     [ ! -f "$SSH_KEY" ] && error "密钥文件不存在: $SSH_KEY"
 fi
@@ -148,25 +148,25 @@ echo -e "${CYAN}  第二步：项目部署配置${NC}"
 divider
 echo ""
 
-read -p "部署目录 [/opt/bolg]: " DEPLOY_DIR
+read -rp "部署目录 [/opt/bolg]: " DEPLOY_DIR
 DEPLOY_DIR=${DEPLOY_DIR:-/opt/bolg}
 
-read -p "公开服务器端口 [9098]: " PUBLIC_PORT
+read -rp "公开服务器端口 [9098]: " PUBLIC_PORT
 PUBLIC_PORT=${PUBLIC_PORT:-9098}
 
-read -p "管理后台端口 [3033]: " ADMIN_PORT
+read -rp "管理后台端口 [3033]: " ADMIN_PORT
 ADMIN_PORT=${ADMIN_PORT:-3033}
 
-read -p "域名（留空则使用 IP 访问）: " DOMAIN
+read -rp "域名（留空则使用 IP 访问）: " DOMAIN
 
 if [ -n "$DOMAIN" ]; then
-    read -p "子路径（如 /blog/，留空则为根路径） [/]: " BASE_PATH
+    read -rp "子路径（如 /blog/，留空则为根路径） [/]: " BASE_PATH
     BASE_PATH=${BASE_PATH:-/}
 else
     BASE_PATH="/"
 fi
 
-read -p "保留历史版本数量 [3]: " KEEP_RELEASES
+read -rp "保留历史版本数量 [3]: " KEEP_RELEASES
 KEEP_RELEASES=${KEEP_RELEASES:-3}
 
 SERVICE_NAME="bolg.service"
@@ -181,14 +181,14 @@ echo -e "${CYAN}  第三步：管理员账号配置${NC}"
 divider
 echo ""
 
-read -p "管理员用户名 [admin]: " ADMIN_USERNAME
+read -rp "管理员用户名 [admin]: " ADMIN_USERNAME
 ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
 
-read -s -p "管理员密码: " ADMIN_PASSWORD
+read -srp "管理员密码: " ADMIN_PASSWORD
 echo ""
 [ -z "$ADMIN_PASSWORD" ] && error "密码不能为空"
 
-read -s -p "确认密码: " ADMIN_PASSWORD_CONFIRM
+read -srp "确认密码: " ADMIN_PASSWORD_CONFIRM
 echo ""
 [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ] && error "两次密码不一致"
 
@@ -204,15 +204,15 @@ echo -e "${CYAN}  第四步：Nginx 配置（可选）${NC}"
 divider
 echo ""
 
-read -p "是否配置 Nginx 反向代理？[Y/n]: " ENABLE_NGINX
+read -rp "是否配置 Nginx 反向代理？[Y/n]: " ENABLE_NGINX
 ENABLE_NGINX=${ENABLE_NGINX:-Y}
 
 if [[ ! "$ENABLE_NGINX" =~ ^[Nn]$ ]]; then
-    read -p "是否配置 SSL/HTTPS？[Y/n]: " ENABLE_SSL
+    read -rp "是否配置 SSL/HTTPS？[Y/n]: " ENABLE_SSL
     ENABLE_SSL=${ENABLE_SSL:-Y}
     
     if [[ ! "$ENABLE_SSL" =~ ^[Nn]$ ]]; then
-        read -p "邮箱地址（用于 Let's Encrypt）: " SSL_EMAIL
+        read -rp "邮箱地址（用于 Let's Encrypt）: " SSL_EMAIL
         [ -z "$SSL_EMAIL" ] && SSL_EMAIL="admin@$DOMAIN"
     fi
 else
@@ -241,7 +241,7 @@ echo ""
 divider
 echo ""
 
-read -p "确认以上配置并开始部署？[Y/n]: " CONFIRM
+read -rp "确认以上配置并开始部署？[Y/n]: " CONFIRM
 [ "$CONFIRM" = "n" ] || [ "$CONFIRM" = "N" ] && echo "部署已取消" && exit 0
 
 # ============================================================
@@ -281,8 +281,18 @@ cd $RELEASE_DIR
 # 安装 Node.js (如果需要)
 if ! command -v node &> /dev/null; then
     echo "安装 Node.js 20..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y nodejs
+    if command -v apt-get &> /dev/null; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+    elif command -v dnf &> /dev/null; then
+        dnf install -y nodejs
+    elif command -v yum &> /dev/null; then
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+        yum install -y nodejs
+    else
+        echo "错误: 不支持的包管理器，请手动安装 Node.js 20+"
+        exit 1
+    fi
 fi
 
 echo "Node.js 版本: \$(node -v)"
@@ -372,12 +382,21 @@ if [[ ! "$ENABLE_NGINX" =~ ^[Nn]$ ]]; then
     ssh_cmd "
     # 安装 Nginx (如果需要)
     if ! command -v nginx &> /dev/null; then
-        apt-get update
-        apt-get install -y nginx
+        if command -v apt-get &> /dev/null; then
+            apt-get update
+            apt-get install -y nginx
+        elif command -v dnf &> /dev/null; then
+            dnf install -y nginx
+        elif command -v yum &> /dev/null; then
+            yum install -y nginx
+        else
+            echo "错误: 不支持的包管理器，请手动安装 Nginx"
+            exit 1
+        fi
     fi
     
     # 创建 Nginx 配置
-    cat > /etc/nginx/sites-available/bolg << 'NGINX_EOF'
+    cat > /etc/nginx/sites-available/bolg << NGINX_EOF
 server {
     listen 80;
     server_name $DOMAIN _;
@@ -393,7 +412,7 @@ server {
         proxy_set_header Connection \"upgrade\";
     }
     
-    location ${BASE_PATH}admin/ {
+    location ^~ ${BASE_PATH}admin/ {
         proxy_pass http://127.0.0.1:$ADMIN_PORT/admin/;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -420,21 +439,31 @@ NGINX_EOF
     echo ""
     
     # 配置 SSL
-    if [[ ! "$ENABLE_SSL" =~ ^[Nn]$ ]] && [ -n "$DOMAIN" ]; then
-        info "步骤 8/8: 配置 SSL/HTTPS..."
-        ssh_cmd "
-        # 安装 Certbot
-        apt-get install -y certbot python3-certbot-nginx
-        
-        # 获取证书
-        certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL
-        
-        # 设置自动续期
-        systemctl enable certbot.timer
-        systemctl start certbot.timer
-        "
-        success "SSL 配置完成"
-        echo ""
+    if [[ ! "$ENABLE_SSL" =~ ^[Nn]$ ]]; then
+        if [ -z "$DOMAIN" ]; then
+            warning "未设置域名，跳过 SSL 配置"
+        else
+            info "步骤 8/8: 配置 SSL/HTTPS..."
+            ssh_cmd "
+            # 安装 Certbot
+            if command -v apt-get &> /dev/null; then
+                apt-get install -y certbot python3-certbot-nginx
+            elif command -v dnf &> /dev/null; then
+                dnf install -y certbot python3-certbot-nginx
+            elif command -v yum &> /dev/null; then
+                yum install -y certbot python3-certbot-nginx
+            fi
+
+            # 获取证书
+            certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL
+
+            # 设置自动续期
+            systemctl enable certbot.timer
+            systemctl start certbot.timer
+            "
+            success "SSL 配置完成"
+            echo ""
+        fi
     else
         info "步骤 8/8: 跳过 SSL 配置"
         echo ""
@@ -447,7 +476,7 @@ fi
 
 # 7.8 初始化数据库和管理员
 info "初始化数据库和管理员账号..."
-ssh_cmd "cd $DEPLOY_DIR/current && node scripts/init-admin.js --username $ADMIN_USERNAME --password $ADMIN_PASSWORD --non-interactive"
+ssh_cmd "cd $DEPLOY_DIR/current && ADMIN_PASSWORD=\"$ADMIN_PASSWORD\" node scripts/init-admin.js --username \"$ADMIN_USERNAME\" --non-interactive"
 success "数据库和管理员初始化完成"
 echo ""
 

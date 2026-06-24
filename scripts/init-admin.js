@@ -41,8 +41,10 @@ async function main() {
   
   if (args.nonInteractive) {
     // 非交互式模式
-    if (!username || !password) {
-      console.error('❌ 非交互式模式需要提供 --username 和 --password 参数')
+    // 优先使用环境变量，其次命令行参数
+    if (!password) password = process.env.ADMIN_PASSWORD
+    if (!password) {
+      console.error('❌ 需要提供 --password 参数或 ADMIN_PASSWORD 环境变量')
       process.exit(1)
     }
     
@@ -117,9 +119,9 @@ async function main() {
   // 检查用户是否已存在
   const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
   if (existingUser) {
-    console.error(`❌ 用户 "${username}" 已存在`)
+    console.log(`ℹ️  用户 "${username}" 已存在，跳过创建`)
     db.close()
-    process.exit(1)
+    process.exit(0)
   }
 
   // 创建用户

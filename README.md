@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="TechBlog" width="100%">
+</p>
+
 # TechBlog - 博客服务系统
 
 一个轻量级的博客服务系统，支持文章管理、评论、分类标签、全文搜索，采用双服务器架构实现前后端分离与权限隔离。

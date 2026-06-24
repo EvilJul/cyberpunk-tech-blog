@@ -2,7 +2,7 @@
   "name": "reproduction",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "轻量级博客服务系统，支持文章管理、评论、分类标签、全文搜索",
   "main": "index.js",
   "directories": {
     "doc": "docs"

@@ -1,6 +1,6 @@
 #!/bin/bash
-# setup.sh - Bolg 傻瓜式一键部署脚本
-# 用户只需根据引导输入配置，脚本自动完成所有部署工作
+# setup.sh - Bolg 傻瓜式一键部署脚本（远程构建版）
+# 所有编译构建都在远程服务器上执行
 
 set -e
 
@@ -10,7 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # 工具函数
 info() { echo -e "${BLUE}[信息]${NC} $1"; }
@@ -21,7 +21,7 @@ ask() { echo -e "${CYAN}$1${NC}"; }
 
 # 生成随机字符串
 generate_secret() {
-    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32
+    openssl rand -hex 32 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | head -c 64
 }
 
 # 检查命令是否存在
@@ -48,6 +48,8 @@ echo "  3. 管理员账号设置"
 echo "  4. Nginx 反向代理（可选）"
 echo "  5. SSL/HTTPS 配置（可选）"
 echo ""
+echo "  注意：所有编译构建将在远程服务器上执行"
+echo ""
 divider
 echo ""
 
@@ -56,25 +58,12 @@ echo ""
 # ============================================================
 info "检查本地环境..."
 
-if ! check_command node; then
-    error "未检测到 Node.js，请先安装 Node.js 18+"
-fi
-
-if ! check_command npm; then
-    error "未检测到 npm，请先安装 npm"
-fi
-
-if ! check_command rsync; then
-    error "未检测到 rsync，请先安装 rsync"
-fi
-
 if ! check_command ssh; then
     error "未检测到 ssh，请先安装 ssh"
 fi
 
-NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    error "Node.js 版本过低，需要 18+，当前版本: $(node -v)"
+if ! check_command rsync; then
+    error "未检测到 rsync，请先安装 rsync"
 fi
 
 success "本地环境检查通过"
@@ -262,51 +251,63 @@ echo ""
 info "开始部署..."
 echo ""
 
-# 7.1 本地构建
-info "步骤 1/8: 构建前端项目..."
-VITE_BASE_PATH=$BASE_PATH npm run build
-success "前端构建完成"
+# 7.1 上传源代码
+info "步骤 1/8: 上传源代码到服务器..."
+RELEASE_DIR="$DEPLOY_DIR/releases/$(date +%Y%m%d_%H%M%S)"
+
+rsync_cmd \
+    --exclude='node_modules' \
+    --exclude='.git' \
+    --exclude='dist' \
+    --exclude='server/data' \
+    ./ \
+    "$REMOTE_USER@$REMOTE_HOST:$RELEASE_DIR/"
+success "源代码上传完成"
 echo ""
 
 # 7.2 创建远程目录结构
 info "步骤 2/8: 创建远程目录结构..."
-ssh_cmd "mkdir -p $DEPLOY_DIR/{releases,shared/data,shared/backups}"
+ssh_cmd "mkdir -p $DEPLOY_DIR/{shared/data/uploads,shared/backups}"
 success "远程目录创建完成"
 echo ""
 
-# 7.3 上传文件
-info "步骤 3/8: 上传文件到服务器..."
-RELEASE_DIR="$DEPLOY_DIR/releases/$(date +%Y%m%d_%H%M%S)"
-rsync_cmd \
-    dist/ \
-    server/ \
-    package.json \
-    package-lock.json \
-    "$REMOTE_USER@$REMOTE_HOST:$RELEASE_DIR/"
-success "文件上传完成"
-echo ""
-
-# 7.4 服务器环境配置
-info "步骤 4/8: 配置服务器环境..."
+# 7.3 远程安装依赖和构建
+info "步骤 3/8: 在服务器上安装依赖并构建..."
 ssh_cmd << REMOTE_SCRIPT
 set -e
 
+cd $RELEASE_DIR
+
 # 安装 Node.js (如果需要)
 if ! command -v node &> /dev/null; then
-    echo "安装 Node.js..."
+    echo "安装 Node.js 20..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
 fi
 
-cd $RELEASE_DIR
+echo "Node.js 版本: \$(node -v)"
+echo "npm 版本: \$(npm -v)"
 
-# 安装依赖
+# 安装项目依赖
 echo "安装项目依赖..."
+npm install
+
+# 构建前端
+echo "构建前端项目..."
+VITE_BASE_PATH=$BASE_PATH npm run build
+
+# 安装生产依赖
+echo "安装生产依赖..."
 npm install --production
 
-# 创建 .env 文件
-echo "创建环境配置..."
-cat > .env << EOF
+echo "构建完成"
+REMOTE_SCRIPT
+success "依赖安装和构建完成"
+echo ""
+
+# 7.4 配置环境变量
+info "步骤 4/8: 配置环境变量..."
+ssh_cmd "cat > $RELEASE_DIR/.env << EOF
 JWT_SECRET=$JWT_SECRET
 JWT_EXPIRES_IN=24h
 NODE_ENV=production
@@ -314,14 +315,15 @@ PUBLIC_PORT=$PUBLIC_PORT
 ADMIN_PORT=$ADMIN_PORT
 CORS_ORIGIN=http://localhost:$PUBLIC_PORT
 VITE_BASE_PATH=$BASE_PATH
-EOF
+EOF"
+success "环境变量配置完成"
+echo ""
 
+# 7.5 创建符号链接
+info "步骤 5/8: 创建符号链接和清理旧版本..."
+ssh_cmd "
 # 数据目录符号链接
-if [ ! -d "$DEPLOY_DIR/shared/data" ] || [ ! "$(ls -A $DEPLOY_DIR/shared/data 2>/dev/null)" ]; then
-    echo "初始化数据目录..."
-    mkdir -p $DEPLOY_DIR/shared/data/uploads
-fi
-ln -sfn $DEPLOY_DIR/shared/data server/data
+ln -sfn $DEPLOY_DIR/shared/data $RELEASE_DIR/server/data
 
 # 当前版本符号链接
 ln -sfn $RELEASE_DIR $DEPLOY_DIR/current
@@ -329,14 +331,12 @@ ln -sfn $RELEASE_DIR $DEPLOY_DIR/current
 # 清理旧版本
 cd $DEPLOY_DIR/releases
 ls -t | tail -n +$((KEEP_RELEASES + 1)) | xargs rm -rf 2>/dev/null || true
-
-echo "服务器环境配置完成"
-REMOTE_SCRIPT
-success "服务器环境配置完成"
+"
+success "符号链接创建完成"
 echo ""
 
-# 7.5 创建 systemd 服务
-info "步骤 5/8: 创建 systemd 服务..."
+# 7.6 创建 systemd 服务
+info "步骤 6/8: 创建 systemd 服务..."
 ssh_cmd "cat > /etc/systemd/system/$SERVICE_NAME << EOF
 [Unit]
 Description=Bolg Blog Service
@@ -366,9 +366,9 @@ systemctl restart $SERVICE_NAME"
 success "systemd 服务创建完成"
 echo ""
 
-# 7.6 配置 Nginx
+# 7.7 配置 Nginx
 if [[ ! "$ENABLE_NGINX" =~ ^[Nn]$ ]]; then
-    info "步骤 6/8: 配置 Nginx..."
+    info "步骤 7/8: 配置 Nginx..."
     ssh_cmd "
     # 安装 Nginx (如果需要)
     if ! command -v nginx &> /dev/null; then
@@ -421,7 +421,7 @@ NGINX_EOF
     
     # 配置 SSL
     if [[ ! "$ENABLE_SSL" =~ ^[Nn]$ ]] && [ -n "$DOMAIN" ]; then
-        info "步骤 7/8: 配置 SSL/HTTPS..."
+        info "步骤 8/8: 配置 SSL/HTTPS..."
         ssh_cmd "
         # 安装 Certbot
         apt-get install -y certbot python3-certbot-nginx
@@ -436,17 +436,17 @@ NGINX_EOF
         success "SSL 配置完成"
         echo ""
     else
-        info "步骤 7/8: 跳过 SSL 配置"
+        info "步骤 8/8: 跳过 SSL 配置"
         echo ""
     fi
 else
-    info "步骤 6/8: 跳过 Nginx 配置"
-    info "步骤 7/8: 跳过 SSL 配置"
+    info "步骤 7/8: 跳过 Nginx 配置"
+    info "步骤 8/8: 跳过 SSL 配置"
     echo ""
 fi
 
-# 7.7 初始化数据库和管理员
-info "步骤 8/8: 初始化数据库和管理员账号..."
+# 7.8 初始化数据库和管理员
+info "初始化数据库和管理员账号..."
 ssh_cmd "cd $DEPLOY_DIR/current && node scripts/init-admin.js --username $ADMIN_USERNAME --password $ADMIN_PASSWORD --non-interactive"
 success "数据库和管理员初始化完成"
 echo ""

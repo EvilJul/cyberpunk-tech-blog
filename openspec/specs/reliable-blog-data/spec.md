@@ -1,0 +1,55 @@
+# reliable-blog-data Specification
+
+## Purpose
+TBD - created by archiving change harden-blog-platform. Update Purpose after archive.
+## Requirements
+### Requirement: 原子统计与可重复迁移
+
+系统 SHALL 在 SQLite 存储站点和文章统计，原子递增、文章外键级联删除、列表聚合返回；迁移已有 stats.json 仅执行一次并保留备份，拒绝无效数据且不得静默清零；浏览和点赞限流，同一来源对同一文章点赞一次。
+
+来源：SEC-04 BE-02。
+
+#### Scenario: 原子统计与可重复迁移验收
+- **WHEN** 并发计数、重复点赞、重复执行迁移或删除文章
+- **THEN** 计数不丢失、重复点赞不增长、迁移不重复累加且删除无残留统计
+
+### Requirement: 草稿隔离
+
+系统 SHALL 对匿名及非管理员的列表、详情、搜索、分类计数和统计仅暴露 published 文章，管理员鉴权后可查看草稿。
+
+来源：BE-03。
+
+#### Scenario: 草稿隔离验收
+- **WHEN** 访客指定 status=draft 或直接使用草稿 slug 搜索访问
+- **THEN** 列表搜索不包含草稿且详情返回 404
+
+### Requirement: 分类标签一致性
+
+系统 SHALL 事务化删除分类并将文章分类置空，删除标签清理关联，提供管理员重命名接口并校验重复名称。
+
+来源：BE-04。
+
+#### Scenario: 分类标签一致性验收
+- **WHEN** 删除或重命名正在使用的分类标签
+- **THEN** 文章保留、无悬空关系且事务失败全部回滚
+
+### Requirement: 稳健中文搜索
+
+系统 SHALL 参数化处理 FTS 查询，空或特殊字符查询安全返回，FTS 无结果时对已发布范围执行分页中文 LIKE 降级。
+
+来源：BE-05。
+
+#### Scenario: 稳健中文搜索验收
+- **WHEN** 搜索中文片段、引号或纯符号
+- **THEN** 不产生 SQL 异常、不泄露草稿且返回稳定分页
+
+### Requirement: 服务生命周期
+
+系统 SHALL 对 SIGTERM/SIGINT 幂等停止接收请求、排空连接并关闭 SQLite，10 秒超时非零退出；未捕获异常与未处理拒绝记录上下文并受控非零退出。
+
+来源：BE-01 BE-06。
+
+#### Scenario: 服务生命周期验收
+- **WHEN** 持续请求期间发送退出信号或触发进程级异常
+- **THEN** 连接排空后关闭数据库；致命异常不继续以健康状态运行，重启后已提交记录可读
+

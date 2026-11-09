@@ -1,0 +1,947 @@
+openapi: 3.1.0
+info:
+  title: Bolg 发布目标 API
+  version: 1.0.0
+  description: 默认 PUBLISHING_API_ENABLED=false（关闭时404）。只接受 bpk_<key_id>.<secret> Bearer，禁止 query 凭据、Cookie 或旧 JWT
+    替代。所有 JSON 最大2 MiB。来源归属由 integration.id+external_id 决定，轮换不改变归属。所有写请求必须 Idempotency-Key；认证/撤销/权限/归属先于重放，重放先于版本校验。成功与响应快照同事务保存24h；指纹包括规范JSON（Markdown内部不改写）或上传字节/元数据以及条件头。同键不同指纹409，并发超时409+Retry-After；失败不缓存。总量60/分钟、写20/分钟、媒体10/分钟同时累计；认证失败每IP30/分钟。生产HTTPS，默认无跨源CORS。机器无删除、管理或自助发key接口。
+servers:
+- url: https://blog.example/api/v1
+  description: 示例域名；子路径部署为 https://blog.example/blog/api/v1
+security:
+- integrationBearer: []
+paths:
+  /connection:
+    get:
+      operationId: getConnection
+      summary: 检查集成连接
+      security:
+      - integrationBearer: []
+      x-required-scopes: []
+      description: 只要求有效集成密钥，无 scope 前提。 所有响应 no-store。
+      parameters: []
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: &id001
+              description: 服务生成 UUID，不信任传入值；重放时为本次请求 ID
+              schema:
+                type: string
+                format: uuid
+            Cache-Control: &id002
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /articles:
+    get:
+      operationId: listArticles
+      summary: 仅当前集成映射，created_at DESC、id ASC；无正文；分页不是快照，客户端按 id 去重
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:read
+      description: 需要独立 scope articles:read。 所有响应 no-store。
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          default: 1
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - draft
+          - published
+      - in: query
+        name: external_id
+        schema: &id005
+          type: string
+          pattern: ^[A-Za-z0-9._~-]{1,128}$
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /articles/{id}:
+    get:
+      operationId: getArticle
+      summary: 读取工作副本和公开版本
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:read
+      description: 需要独立 scope articles:read。 所有响应 no-store。
+      parameters:
+      - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: &id003
+              description: v1 强 ETag；区别于 studio 的数字 ETag
+              schema: &id004
+                type: string
+                pattern: ^"article-[A-Za-z0-9-]+-r[1-9][0-9]*"$
+              example: '"article-550e8400-e29b-41d4-a716-446655440000-r3"'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+    patch:
+      operationId: patchArticle
+      summary: 局部保存，仅更新工作副本；省略保持，允许 null 的字段显式 null 清空
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:write
+      description: 需要独立 scope articles:write。 所有响应 no-store。
+      parameters:
+      - $ref: '#/components/parameters/ArticleId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: *id003
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '412':
+          $ref: '#/components/responses/Error412'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '428':
+          $ref: '#/components/responses/Error428'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticlePatch'
+  /articles/by-external-id/{externalId}:
+    put:
+      operationId: upsertArticle
+      summary: 按来源编号完整保存；新建201/更新200；新建必须 If-None-Match:*，更新必须 If-Match，互斥
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:write
+      description: 需要独立 scope articles:write。 所有响应 no-store。 PUT 必填 title/body_markdown。省略 tags 重置[]，其他可空字段重置null；省略
+        slug 新建生成 UUID 衍生值、更新保持。保存不改变公开快照。canonical_source.external_id 必须等于路径编号。
+      parameters:
+      - $ref: '#/components/parameters/ExternalId'
+      - name: If-Match
+        in: header
+        required: false
+        schema: *id004
+        description: 单一当前强 ETag；禁止弱 ETag 和 *
+      - $ref: '#/components/parameters/IfNoneMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: *id003
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '410':
+          $ref: '#/components/responses/Error410'
+        '412':
+          $ref: '#/components/responses/Error412'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '428':
+          $ref: '#/components/responses/Error428'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '201':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: *id003
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticlePut'
+      x-preconditions:
+        create:
+          required:
+          - If-None-Match
+          value: '*'
+        update:
+          required:
+          - If-Match
+        mutuallyExclusive:
+        - If-Match
+        - If-None-Match
+  /articles/{id}/publish:
+    post:
+      operationId: publishArticle
+      summary: 发布完整工作副本
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:publish
+      description: 需要独立 scope articles:publish。 所有响应 no-store。 不隐含要求 articles:write。版本匹配且相同快照发布/已撤回资源再撤回可 no-op，revision
+        不增加。 不接受非空 JSON 字段，返回422；正常请求不发送正文。
+      parameters:
+      - $ref: '#/components/parameters/ArticleId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: *id003
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '412':
+          $ref: '#/components/responses/Error412'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '428':
+          $ref: '#/components/responses/Error428'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /articles/{id}/unpublish:
+    post:
+      operationId: unpublishArticle
+      summary: 撤回公开可见性并保留工作副本
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - articles:publish
+      description: 需要独立 scope articles:publish。 所有响应 no-store。 不隐含要求 articles:write。版本匹配且相同快照发布/已撤回资源再撤回可 no-op，revision
+        不增加。 不接受非空 JSON 字段，返回422；正常请求不发送正文。
+      parameters:
+      - $ref: '#/components/parameters/ArticleId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            ETag: *id003
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '412':
+          $ref: '#/components/responses/Error412'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '428':
+          $ref: '#/components/responses/Error428'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /media:
+    post:
+      operationId: uploadMedia
+      summary: 仅实际文件上传；URL 可公开读取，不用于秘密附件
+      security:
+      - integrationBearer: []
+      x-required-scopes:
+      - media:write
+      description: 需要独立 scope media:write。 所有响应 no-store。 同集成输入 SHA-256 绑定已完成媒体，24h 后亦可复用。临时失败残留可重入清扫；已登记未引用媒体7天后检查全部工作/公开引用再清理，不清理历史未登记文件。
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: 成功（幂等重放保留原状态/正文/ETag）
+          headers:
+            X-Request-ID: *id001
+            Cache-Control: *id002
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: 重放成功时 true；原 body.request_id 不变
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 单文件，JPEG/PNG/WebP/GIF，最大5 MiB，4000万像素；实际解码转JPEG、去元数据、最大宽1200；禁止SVG/远程URL
+              required:
+              - file
+components:
+  securitySchemes:
+    integrationBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: bpk_<key_id>.<secret>
+      description: 最少256bit随机secret，摘要存储；scope见各操作 x-required-scopes；非OAuth，不将scope写入HTTP安全方案数组
+  parameters:
+    ArticleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ExternalId:
+      name: externalId
+      in: path
+      required: true
+      schema: *id005
+      description: 大小写敏感，URL 编码并仅解码一次；禁止 slash、控制字符和二次解码
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: ^[\x20-\x7E]{8,128}$
+      description: 所有写入必须；同集成+方法+规范目标+key 唯一，成功响应保留24h
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: *id004
+      description: 单一当前强 ETag；禁止弱 ETag 和 *
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      schema:
+        type: string
+        const: '*'
+      description: 仅首次 PUT 创建必须；与 If-Match 互斥
+  schemas:
+    CanonicalSource:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          pattern: ^https?://
+          description: 禁止账号密码；仅存储，服务器不抓取
+        external_id: *id005
+      required:
+      - url
+      - external_id
+    ArticlePut:
+      type: object
+      additionalProperties: false
+      properties: &id006
+        title: &id007
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: trim 后 Unicode 字符数
+        body_markdown: &id008
+          type: string
+          description: 原样 Markdown，允许空；UTF-8 最大 1048576 字节，不 trim 或改换行
+        slug: &id009
+          type: string
+          pattern: ^[a-z0-9-]{1,160}$
+        tags: &id010
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+          description: trim 后完全相同项去重；发布才物化
+        category: &id011
+          type:
+          - integer
+          - 'null'
+          description: 已存在分类 ID；不能新建或改名分类
+        excerpt: &id012
+          type:
+          - string
+          - 'null'
+          maxLength: 1000
+        canonical_source: &id013
+          anyOf:
+          - $ref: '#/components/schemas/CanonicalSource'
+          - type: 'null'
+        cover_media_id: &id014
+          type:
+          - string
+          - 'null'
+          description: 仅本集成已完成上传的媒体 ID
+      required:
+      - title
+      - body_markdown
+    ArticlePatch:
+      type: object
+      additionalProperties: false
+      properties: *id006
+    Article:
+      type: object
+      additionalProperties: false
+      properties:
+        title: *id007
+        body_markdown: *id008
+        slug: *id009
+        tags: *id010
+        category: *id011
+        excerpt: *id012
+        canonical_source: *id013
+        cover_media_id: *id014
+        id:
+          type: string
+          minLength: 1
+          description: 不透明文章 ID；新建为 UUID，禁止客户端按整数解析
+        external_id: *id005
+        integration_id: &id015
+          type: string
+          format: uuid
+        status: &id016
+          type: string
+          enum:
+          - draft
+          - published
+        revision: &id017
+          type: integer
+          minimum: 1
+        published_revision: &id018
+          description: 最后一次公开快照版本；从未发布为 null，撤回后保留历史值
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        updated_at: &id019
+          type: string
+          format: date-time
+        public_url: &id020
+          type:
+          - string
+          - 'null'
+          format: uri-reference
+      required:
+      - title
+      - body_markdown
+      - slug
+      - tags
+      - category
+      - excerpt
+      - canonical_source
+      - cover_media_id
+      - id
+      - external_id
+      - integration_id
+      - status
+      - revision
+      - published_revision
+      - updated_at
+      - public_url
+    ArticleSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        title: *id007
+        slug: *id009
+        tags: *id010
+        category: *id011
+        excerpt: *id012
+        canonical_source: *id013
+        cover_media_id: *id014
+        id:
+          type: string
+          minLength: 1
+          description: 不透明文章 ID；新建为 UUID，禁止客户端按整数解析
+        external_id: *id005
+        integration_id: *id015
+        status: *id016
+        revision: *id017
+        published_revision: *id018
+        updated_at: *id019
+        public_url: *id020
+      required:
+      - title
+      - slug
+      - tags
+      - category
+      - excerpt
+      - canonical_source
+      - cover_media_id
+      - id
+      - external_id
+      - integration_id
+      - status
+      - revision
+      - published_revision
+      - updated_at
+      - public_url
+    Pagination:
+      type: object
+      additionalProperties: false
+      properties:
+        page:
+          type: integer
+          minimum: 0
+        per_page:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        total_pages:
+          type: integer
+          minimum: 0
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+      required:
+      - page
+      - per_page
+      - total
+      - total_pages
+      - has_next
+      - has_prev
+    Connection:
+      type: object
+      additionalProperties: false
+      properties:
+        integration_id:
+          type: string
+          format: uuid
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+            - articles:read
+            - articles:write
+            - articles:publish
+            - media:write
+        expires_at:
+          type: string
+          format: date-time
+        api_version:
+          type: string
+          const: v1
+      required:
+      - integration_id
+      - scopes
+      - expires_at
+      - api_version
+    Media:
+      type: object
+      additionalProperties: false
+      properties:
+        id: &id021
+          type: string
+        url:
+          type: string
+          format: uri-reference
+        mime_type:
+          const: image/jpeg
+        size:
+          type: integer
+          minimum: 1
+        width:
+          type: integer
+          minimum: 1
+          maximum: 1200
+        height:
+          type: integer
+          minimum: 1
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - id
+      - url
+      - mime_type
+      - size
+      - width
+      - height
+      - sha256
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code: *id021
+            message:
+              type: string
+              description: 中文、安全的错误消息
+            details:
+              description: 仅安全字段错误或当前版本；不含正文/堆栈/其他文章 ID
+              type:
+              - object
+              - array
+              - 'null'
+          required:
+          - code
+          - message
+          - details
+        request_id:
+          type: string
+          format: uuid
+      required:
+      - error
+      - request_id
+    ArticleResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/Article'
+        request_id:
+          type: string
+          format: uuid
+      required:
+      - data
+      - request_id
+    ConnectionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/Connection'
+        request_id:
+          type: string
+          format: uuid
+      required:
+      - data
+      - request_id
+    MediaResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/Media'
+        request_id:
+          type: string
+          format: uuid
+      required:
+      - data
+      - request_id
+    ArticleListResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        request_id:
+          type: string
+          format: uuid
+      required:
+      - data
+      - pagination
+      - request_id
+  responses:
+    Error400:
+      description: 格式错误、无 Idempotency-Key、条件格式错误或两类条件同时出现
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error401:
+      description: 凭据无效、到期、已撤销或集成停用；Cookie/JWT 无效
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error403:
+      description: scope 不足
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error404:
+      description: 不存在或不属当前集成；功能关闭时亦 404
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error409:
+      description: SLUG_CONFLICT / IDEMPOTENCY_CONFLICT / REQUEST_IN_PROGRESS
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+        Retry-After:
+          description: 秒；409 仅 REQUEST_IN_PROGRESS 返回
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error410:
+      description: ARTICLE_GONE：已删除来源映射，不能自动重建
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error412:
+      description: REVISION_CONFLICT：旧版本或创建条件命中现有映射
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error413:
+      description: 超过 JSON 2 MiB、正文 1 MiB 或文件 5 MiB
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error415:
+      description: 不支持的媒体类型或伪 MIME
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error422:
+      description: 字段校验失败、未知字段或非法分页
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error428:
+      description: PRECONDITION_REQUIRED：缺少必要条件
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error429:
+      description: 请求限流
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+        Retry-After:
+          description: 秒；409 仅 REQUEST_IN_PROGRESS 返回
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error500:
+      description: 内部错误；不缓存失败
+      headers:
+        X-Request-ID: *id001
+        Cache-Control: *id002
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

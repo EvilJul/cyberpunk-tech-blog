@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A cyberpunk-themed tech blog system with WebGL visual effects, SQLite persistence, and JWT authentication. Features a dual-server architecture that physically isolates public read-only APIs from authenticated admin APIs.
+A cyberpunk-themed tech blog system with WebGL visual effects, SQLite persistence, and JWT authentication. Provides a same-origin reader site and author workspace, with an optional legacy JWT administration service.
 
 **Tech Stack**: React 19 + Vite 8 + Tailwind CSS 4 + Express 5 + SQLite3 + Three.js/OGL
 
@@ -35,21 +35,15 @@ node scripts/init-admin.js
 
 ## Architecture
 
-### Dual-Server Design
+### Same-Origin Application and Legacy Compatibility
 
-Two Express instances run on separate ports for security isolation:
+`server/index.js` (9098) serves the reader site, `/login`, `/setup`, `/studio/*`, public APIs and protected author APIs. Browser administration uses revocable HttpOnly Cookie sessions, CSRF and same-origin validation. Vite (9099) proxies requests during development; production needs one Web port.
 
-1. **Public Server** (`server/index.js`, port 9098)
-   - Serves frontend SPA from `dist/`
-   - Exposes read-only APIs: `/api/articles`, `/api/categories`, `/api/tags`, `/api/stats`
-   - Comment posting requires authentication
-   - Binds to `0.0.0.0` (public access)
+`server/index-admin.js` (3033) and `npm run admin` remain optional legacy JWT compatibility. Compose enables this service only through `--profile legacy-admin`, bound to host loopback. Default Compose services are public and daily backup.
 
-2. **Admin Server** (`server/index-admin.js`, port 3033)
-   - Serves vanilla JS admin panel from `admin/index.html`
-   - Exposes write APIs: article CRUD, image upload, settings
-   - All endpoints require JWT authentication + admin role
-   - Access via SSH tunnel: `ssh -L 3033:127.0.0.1:3033 user@server`
+The machine publishing API `/api/v1` requires scoped integration keys and `PUBLISHING_API_ENABLED=true` (default false). Its browser management UI is `/studio/integrations`. Shared article writes belong in `server/services/articleService.js`: save only changes working copies; publish promotes the public snapshot atomically. Modern writes require revision-based `If-Match`.
+
+Migration, setup and rollback: `docs/author-workspace-migration.md`; operations: `docs/operations.md`; publishing contract: `docs/api/publishing-v1.openapi.yaml`.
 
 ### Data Layer
 
@@ -94,7 +88,7 @@ Two Express instances run on separate ports for security isolation:
 ```
 
 **Key Patterns**:
-- No client-side routing - uses scroll anchors and conditional rendering
+- React Router handles reader and author routes with deployment basename support
 - All WebGL components wrapped in `ErrorBoundary`
 - `IntersectionObserver` pauses off-screen WebGL effects
 - Settings context (`SettingsContext.jsx`) provides site-wide config
@@ -105,16 +99,10 @@ Two Express instances run on separate ports for security isolation:
 
 ### Authentication Flow
 
-1. POST `/api/auth/login` with `{username, password}` → returns JWT token
-2. Store token in localStorage (admin panel) or memory (if building React auth)
-3. Include header: `Authorization: Bearer <token>`
-4. Token contains: `{userId, username, role}`, signed with `JWT_SECRET` env var
-5. Middleware `authMiddleware` verifies token, `adminOnly` checks role
-
-**Permission Levels**:
-- **Public**: Article/category/tag reads, stats
-- **Authenticated**: Comment posting, log viewing
-- **Admin**: Upload images, write articles, edit settings
+1. For an empty database, generate a local token with `node scripts/create-setup-token.js` and complete `/setup`; existing accounts are preserved and anonymous registration is disabled.
+2. Browser login uses `POST /api/session/login`; the opaque session Cookie is HttpOnly. `/api/session/me` provides the in-memory CSRF token; mutations send `X-CSRF-Token` and a trusted origin.
+3. `/api/studio/*` requires an administrator session. `/api/v1/*` accepts only integration Bearer credentials, with separate read/write/publish/media scopes and ownership checks.
+4. Legacy `/api/auth/login` and Bearer writes remain gated by `LEGACY_JWT_ENABLED`. Password changes revoke all sessions and invalidate old JWT versions. Browser logout revokes only the current session.
 
 ### WebGL Background Effects
 
@@ -253,9 +241,9 @@ ORDER BY rank
 ## Important Notes
 
 - Admin panel (`admin/index.html`) is pure vanilla JS - no build step, no framework
-- All data writes automatically create `.bak.<timestamp>` backups
+- SQLite snapshots use `scripts/backup-db.js`; Compose runs a daily backup worker. Snapshots exclude uploads and settings, so full-site recovery also needs their matching copies.
 - SQLite WAL files (`blog.db-wal`, `blog.db-shm`) should not be deleted while server runs
 - JWT_SECRET must be set in production (generates random default in dev)
-- First created user automatically gets `admin` role
+- First administrator creation requires a local one-time setup token or trusted local init-admin CLI; never enable anonymous first-user creation
 - WebGL effects gracefully degrade on unsupported browsers
 - Never commit `server/data/` directory - contains user data and credentials

@@ -6,21 +6,26 @@ export default function Footer({ settings }) {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-dark-500 text-sm">
-            © {new Date().getFullYear()} {settings?.title || 'TechBlog'}. {settings?.description || 'Built with React + Vite + Tailwind CSS'}
+            © {new Date().getFullYear()} {settings?.title || 'TechBlog'}.{' '}
+            {settings?.description || 'Built with React + Vite + Tailwind CSS'}
           </div>
           <div className="flex gap-6 text-sm">
             {settings?.github && (
-              <a 
-                href={settings.github} 
-                target="_blank" 
+              <a
+                href={settings.github}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-dark-500 hover:text-gold transition-colors"
               >
                 GitHub
               </a>
             )}
-            <a href="#" className="text-dark-500 hover:text-gold transition-colors">RSS</a>
-            <a href="#" className="text-dark-500 hover:text-gold transition-colors">友链</a>
+            <a
+              href={`${import.meta.env.BASE_URL}rss.xml`}
+              className="text-dark-500 hover:text-gold transition-colors"
+            >
+              RSS
+            </a>
           </div>
         </div>
       </div>

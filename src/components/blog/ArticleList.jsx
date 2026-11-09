@@ -1,3 +1,5 @@
+import { apiFetch } from '../../utils/api'
+import { Link, useParams } from 'react-router-dom'
 import React, { useState, useEffect, useMemo } from 'react'
 import ArticleCard from './ArticleCard'
 import SearchBar from './SearchBar'
@@ -5,14 +7,17 @@ import { useSettings } from '../../contexts/SettingsContext'
 import { Folder, X } from 'lucide-react'
 import { logger } from '../../utils/logger'
 
-export default function ArticleList({ onArticleClick, perPage = 10 }) {
+export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [isComposing, setIsComposing] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState(null)
+  const { name } = useParams()
+  const isTag = window.location.pathname.includes('/tag/')
+  const selectedCategory = isTag ? null : name
+  const selectedTag = isTag ? name : null
   const [pagination, setPagination] = useState({
     page: 1,
     per_page: perPage,
@@ -50,6 +55,8 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
         params.append('category', selectedCategory)
       }
 
+      if (selectedTag) params.append('tag', selectedTag)
+
       if (debouncedSearchQuery.trim()) {
         params.append('search', debouncedSearchQuery.trim())
       }
@@ -57,7 +64,7 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
       const url = `/api/articles?${params}`
       logger.info('正在获取文章', { url, page })
 
-      const res = await fetch(url)
+      const res = await apiFetch(url)
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -65,12 +72,15 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
 
       const data = await res.json()
 
-      logger.info('获取文章成功', { total: data.pagination?.total || data.length })
+      logger.info('获取文章成功', {
+        total: data.pagination?.total || data.length
+      })
 
       // 适配新旧 API 格式
       if (data.data) {
         setArticles(data.data)
         setPagination(data.pagination)
+        onTotal?.(data.pagination.total)
       } else {
         // 兼容旧格式
         setArticles(data)
@@ -85,7 +95,6 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
       setLoading(false)
     } catch (err) {
       logger.error('获取文章失败', { error: err.message, stack: err.stack })
-      console.error('获取文章详细错误:', err)
       setArticles([])
       setPagination({
         page: 1,
@@ -100,31 +109,30 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
   useEffect(() => {
     logger.info('ArticleList 组件已挂载')
     // 获取分类
-    fetch('/api/categories')
-      .then(res => {
+    apiFetch('/api/categories')
+      .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
       .then(setCategories)
-      .catch(err => {
+      .catch((err) => {
         logger.error('获取分类失败', { error: err.message })
-        console.error('获取分类详细错误:', err)
       })
   }, [])
 
   useEffect(() => {
     fetchArticles(1)
-  }, [debouncedSearchQuery, selectedCategory, perPage])
+  }, [debouncedSearchQuery, selectedCategory, selectedTag, perPage])
 
   const articleCategories = useMemo(() => {
     const catMap = {}
-    categories.forEach(cat => {
+    categories.forEach((cat) => {
       catMap[cat.name] = cat.count || 0
     })
     return Object.entries(catMap).map(([name, count]) => ({ name, count }))
   }, [categories])
 
-  if (loading) {
+  if (loading && !articles.length) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
@@ -138,7 +146,8 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
 
       {searchQuery && (
         <div className="mb-4 text-sm text-dark-400">
-          搜索 "<span className="text-gold">{searchQuery}</span>" 找到 {pagination.total} 篇文章
+          搜索 "<span className="text-gold">{searchQuery}</span>" 找到{' '}
+          {pagination.total} 篇文章
         </div>
       )}
 
@@ -148,8 +157,8 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
           <span className="text-sm font-medium text-white">按分类筛选</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCategory(null)}
+          <Link
+            to="/"
             className={`px-3 py-1.5 rounded-full text-sm transition-all ${
               !selectedCategory
                 ? 'bg-gold/20 text-gold border border-gold/30'
@@ -157,11 +166,11 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
             }`}
           >
             全部
-          </button>
-          {articleCategories.map(cat => (
-            <button
+          </Link>
+          {articleCategories.map((cat) => (
+            <Link
               key={cat.name}
-              onClick={() => setSelectedCategory(selectedCategory === cat.name ? null : cat.name)}
+              to={`/category/${encodeURIComponent(cat.name)}`}
               className={`px-3 py-1.5 rounded-full text-sm transition-all flex items-center gap-1.5 ${
                 selectedCategory === cat.name
                   ? 'bg-gold/20 text-gold border border-gold/30'
@@ -171,7 +180,7 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
               {cat.name}
               <span className="text-xs opacity-70">({cat.count})</span>
               {selectedCategory === cat.name && <X size={12} />}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
@@ -180,11 +189,13 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
         {articles.length === 0 ? (
           <div className="glass-card p-8 text-center">
             <p className="text-dark-400">
-              {searchQuery || selectedCategory ? '没有找到匹配的文章' : '暂无文章'}
+              {searchQuery || selectedCategory
+                ? '没有找到匹配的文章'
+                : '暂无文章'}
             </p>
           </div>
         ) : (
-          articles.map(article => (
+          articles.map((article) => (
             <ArticleCard
               key={article.id}
               article={article}
@@ -212,32 +223,35 @@ export default function ArticleList({ onArticleClick, perPage = 10 }) {
             </button>
 
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(pagination.total_pages, 5) }, (_, i) => {
-                let pageNum
-                if (pagination.total_pages <= 5) {
-                  pageNum = i + 1
-                } else if (pagination.page <= 3) {
-                  pageNum = i + 1
-                } else if (pagination.page >= pagination.total_pages - 2) {
-                  pageNum = pagination.total_pages - 4 + i
-                } else {
-                  pageNum = pagination.page - 2 + i
-                }
+              {Array.from(
+                { length: Math.min(pagination.total_pages, 5) },
+                (_, i) => {
+                  let pageNum
+                  if (pagination.total_pages <= 5) {
+                    pageNum = i + 1
+                  } else if (pagination.page <= 3) {
+                    pageNum = i + 1
+                  } else if (pagination.page >= pagination.total_pages - 2) {
+                    pageNum = pagination.total_pages - 4 + i
+                  } else {
+                    pageNum = pagination.page - 2 + i
+                  }
 
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => fetchArticles(pageNum)}
-                    className={`w-10 h-10 rounded-lg border transition-all ${
-                      pagination.page === pageNum
-                        ? 'bg-gold/20 text-gold border-gold/30'
-                        : 'bg-dark-800/50 text-dark-400 border-dark-700/50 hover:border-gold/30'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => fetchArticles(pageNum)}
+                      className={`w-10 h-10 rounded-lg border transition-all ${
+                        pagination.page === pageNum
+                          ? 'bg-gold/20 text-gold border-gold/30'
+                          : 'bg-dark-800/50 text-dark-400 border-dark-700/50 hover:border-gold/30'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                }
+              )}
             </div>
 
             <button

@@ -1,137 +1,138 @@
-import React, { useState, useEffect, useCallback, memo } from 'react'
-import { User, Mail, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
-
-const CommentSection = memo(function CommentSection({ articleId }) {
-  const [comments, setComments] = useState([])
-  const [formData, setFormData] = useState({ author: '', email: '', content: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const [expanded, setExpanded] = useState(false)
-  const DEFAULT_SHOW = 3
-
+import { apiFetch } from '../../utils/api'
+import React, { useState, useEffect } from 'react'
+export default function CommentSection({ articleId }) {
+  const [comments, setComments] = useState([]),
+    [error, setError] = useState(''),
+    [notice, setNotice] = useState(''),
+    [reply, setReply] = useState(null),
+    [busy, setBusy] = useState(false),
+    [retry, setRetry] = useState(0)
+  const [form, setForm] = useState({ author: '', email: '', content: '' })
   useEffect(() => {
-    fetch(`/api/comments/${articleId}`)
-      .then(res => res.json())
-      .then(data => setComments(data))
-      .catch(err => console.error('获取评论失败:', err))
-  }, [articleId])
-
-  const handleSubmit = useCallback(async (e) => {
+    const controller = new AbortController()
+    setError('')
+    apiFetch(`/api/comments/${articleId}`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw Error('评论加载失败')
+        return r.json()
+      })
+      .then((data) => setComments(data.filter((c) => c.status === 'approved')))
+      .catch((e) => {
+        if (e.name !== 'AbortError') setError(e.message)
+      })
+    return () => controller.abort()
+  }, [articleId, retry])
+  const submit = async (e) => {
     e.preventDefault()
-    setSubmitting(true)
-
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      const res = await fetch(`/api/comments/${articleId}`, {
+      const r = await apiFetch(`/api/comments/${articleId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...form, parentId: reply?.id || null })
       })
-
-      if (res.ok) {
-        const newComment = await res.json()
-        setComments([...comments, newComment])
-        setFormData({ author: '', email: '', content: '' })
-      }
-    } catch (err) {
-      console.error('提交评论失败:', err)
+      if (!r.ok)
+        throw Error(
+          r.status === 429 ? '提交过于频繁，请稍后再试' : '评论提交失败，请重试'
+        )
+      setNotice('评论已提交，审核通过后公开显示。')
+      setForm((f) => ({ ...f, content: '' }))
+      setReply(null)
+    } catch (e) {
+      setError(e.message)
     } finally {
-      setSubmitting(false)
+      setBusy(false)
     }
-  }, [articleId, formData, comments])
-
-  const visibleComments = expanded ? comments : comments.slice(0, DEFAULT_SHOW)
-  const hasMore = comments.length > DEFAULT_SHOW
-
-  return (
-    <div className="mt-12">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between py-3 px-4 bg-dark-800/50 rounded-lg border border-dark-700 hover:border-dark-600 transition-colors cursor-pointer group"
-      >
-        <span className="text-xl font-bold gradient-text">
-          评论区{comments.length > 0 ? `（${comments.length}）` : ''}
-        </span>
-        {expanded
-          ? <ChevronUp size={20} className="text-dark-400 group-hover:text-gold transition-colors" />
-          : <ChevronDown size={20} className="text-dark-400 group-hover:text-gold transition-colors" />
-        }
-      </button>
-
-      {expanded && (
-        <div className="mt-6">
-          <form onSubmit={handleSubmit} className="mb-8">
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="relative">
-                <User className="absolute left-3 top-3 text-dark-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="昵称"
-                  value={formData.author}
-                  onChange={e => setFormData({ ...formData, author: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600 rounded-lg focus:border-gold focus:outline-none"
-                  required
-                />
-              </div>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 text-dark-400" size={18} />
-                <input
-                  type="email"
-                  placeholder="邮箱（选填）"
-                  value={formData.email}
-                  onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600 rounded-lg focus:border-gold focus:outline-none"
-                />
-              </div>
-            </div>
-            <div className="relative mb-4">
-              <MessageSquare className="absolute left-3 top-3 text-dark-400" size={18} />
-              <textarea
-                placeholder="评论内容"
-                value={formData.content}
-                onChange={e => setFormData({ ...formData, content: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600 rounded-lg focus:border-gold focus:outline-none h-24 resize-none"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-6 py-2 bg-gold text-dark-950 rounded-lg font-semibold hover:bg-gold-light transition-colors disabled:opacity-50"
-            >
-              {submitting ? '提交中...' : '发表评论'}
-            </button>
-          </form>
-
-          <div className="space-y-4">
-            {visibleComments.map(comment => (
-              <div key={comment.id} className="p-4 border border-dark-700 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center text-gold text-sm font-bold">
-                    {comment.author.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-semibold text-white">{comment.author}</span>
-                  <span className="text-dark-400 text-sm">{new Date(comment.created_at).toLocaleDateString()}</span>
-                </div>
-                <p className="text-dark-200">{comment.content}</p>
-              </div>
-            ))}
-          </div>
-
-          {hasMore && !expanded && (
-            <button
-              onClick={() => setExpanded(true)}
-              className="w-full mt-4 py-2 text-gold hover:text-gold-light transition-colors text-sm"
-            >
-              查看全部 {comments.length} 条评论
-            </button>
-          )}
-
-          {comments.length === 0 && (
-            <p className="text-dark-500 text-sm text-center py-4">暂无评论，来说两句吧</p>
-          )}
-        </div>
+  }
+  const ids = new Set(comments.map((c) => c.id))
+  const render = (comment, ancestors = []) => (
+    <li key={comment.id}>
+      <div className="comment">
+        <strong>{comment.author}</strong>{' '}
+        <time dateTime={comment.created_at}>
+          {comment.created_at &&
+            new Date(comment.created_at).toLocaleDateString()}
+        </time>
+        <p style={{ whiteSpace: 'pre-wrap' }}>{comment.content}</p>
+        <button
+          onClick={() => {
+            setReply(comment)
+            document.getElementById('comment-content')?.focus()
+          }}
+        >
+          回复 {comment.author}
+        </button>
+      </div>
+      {ancestors.length < 20 && (
+        <ul>
+          {comments
+            .filter(
+              (c) =>
+                (c.parent_id || c.parentId) === comment.id &&
+                !ancestors.includes(c.id)
+            )
+            .map((c) => render(c, [...ancestors, comment.id]))}
+        </ul>
       )}
-    </div>
+    </li>
   )
-})
-
-export default CommentSection
+  return (
+    <section className="comments">
+      <h2>评论区</h2>
+      {error && (
+        <p role="alert">
+          {error}{' '}
+          <button onClick={() => setRetry((n) => n + 1)}>重新加载</button>
+        </p>
+      )}
+      {notice && <p role="status">{notice}</p>}
+      {!comments.length && <p>暂无公开评论，来说两句吧</p>}
+      <ul>
+        {comments
+          .filter((c) => !ids.has(c.parent_id || c.parentId))
+          .map((c) => render(c))}
+      </ul>
+      <form onSubmit={submit}>
+        {reply && (
+          <p>
+            回复 {reply.author}{' '}
+            <button type="button" onClick={() => setReply(null)}>
+              取消回复
+            </button>
+          </p>
+        )}
+        <label>
+          昵称
+          <input
+            required
+            maxLength={80}
+            value={form.author}
+            onChange={(e) => setForm({ ...form, author: e.target.value })}
+          />
+        </label>
+        <label>
+          邮箱（不公开）
+          <input
+            type="email"
+            maxLength={254}
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+        </label>
+        <label>
+          评论内容
+          <textarea
+            id="comment-content"
+            required
+            maxLength={5000}
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+          />
+        </label>
+        <button disabled={busy}>{busy ? '提交中…' : '发表评论'}</button>
+      </form>
+    </section>
+  )
+}

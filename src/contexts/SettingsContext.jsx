@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../utils/api'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef
+} from 'react'
 
 const SettingsContext = createContext(null)
 
@@ -22,13 +30,18 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(defaultSettings)
   const [loading, setLoading] = useState(true)
 
+  const request = useRef(null)
   const fetchSettings = useCallback(async () => {
+    if (request.current) return
+    const controller = new AbortController()
+    request.current = controller
     try {
-      const res = await fetch('/api/settings', {
+      const res = await apiFetch('/api/settings', {
+        signal: controller.signal,
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          Pragma: 'no-cache'
         }
       })
 
@@ -38,13 +51,14 @@ export function SettingsProvider({ children }) {
 
       const data = await res.json()
       if (data.settings) {
-        const { theme, ...rest } = data.settings
-        setSettings(prev => ({ ...prev, ...rest }))
+        setSettings((prev) => ({ ...prev, ...data.settings }))
       }
     } catch (err) {
-      console.error('获取设置失败:', err)
+      if (err.name !== 'AbortError' && import.meta.env.DEV)
+        console.warn('获取设置失败:', err)
     } finally {
-      setLoading(false)
+      request.current = null
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [])
 
@@ -63,13 +77,16 @@ export function SettingsProvider({ children }) {
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
+      request.current?.abort()
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [fetchSettings])
 
   return (
-    <SettingsContext.Provider value={{ settings, loading, refreshSettings: fetchSettings }}>
+    <SettingsContext.Provider
+      value={{ settings, loading, refreshSettings: fetchSettings }}
+    >
       {children}
     </SettingsContext.Provider>
   )

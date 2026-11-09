@@ -1,163 +1,134 @@
+import { useAuth } from '../../contexts/AuthContext'
+import { apiFetch } from '../../utils/api'
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Calendar, Eye, Heart, Tag, MessageSquare } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
 import CommentSection from './CommentSection'
+import MarkdownContent from './MarkdownContent'
 import { useSettings } from '../../contexts/SettingsContext'
-
-export default function ArticleDetail({ article, onBack }) {
-  const [fullArticle, setFullArticle] = useState(article)
-  const [loading, setLoading] = useState(!article.content)
-  const [views, setViews] = useState(0)
-  const [likes, setLikes] = useState(0)
-  const [isLiked, setIsLiked] = useState(false)
-  const { settings } = useSettings()
-
+import { useSeo } from '../../utils/seo'
+export default function ArticleDetail() {
+  const { user } = useAuth()
+  const { slug } = useParams(),
+    { settings } = useSettings()
+  const [article, setArticle] = useState(null),
+    [error, setError] = useState(''),
+    [retry, setRetry] = useState(0),
+    [liked, setLiked] = useState(false)
+  useSeo({
+    title: article ? `${article.title} - ${settings.title}` : settings.title,
+    description: article?.excerpt || settings.description,
+    image: article?.cover || article?.cover_image || settings.avatar,
+    article: !!article
+  })
   useEffect(() => {
-    if (!article.content && article.slug) {
-      fetch(`/api/articles/${article.slug}`)
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          return res.json()
-        })
-        .then(data => {
-          setFullArticle(data)
-          setLoading(false)
-        })
-        .catch(err => {
-          console.error('获取文章详情失败:', err)
-          setLoading(false)
-        })
-    }
-  }, [article.slug, article.content])
-
-  useEffect(() => {
-    const id = fullArticle.id || article.id
-    fetch(`/api/stats/article/${id}/views`, { method: 'POST' })
-      .then(res => res.json())
-      .then(data => setViews(data.views))
-      .catch(() => {})
-
-    fetch(`/api/stats/article/${id}/likes`)
-      .then(res => res.json())
-      .then(data => setLikes(data.likes))
-      .catch(() => {})
-  }, [fullArticle.id, article.id])
-
-  const handleLike = async () => {
-    if (!isLiked) {
-      try {
-        const res = await fetch(`/api/stats/article/${article.id}/likes`, { method: 'POST' })
-        const data = await res.json()
-        setLikes(data.likes)
-        setIsLiked(true)
-      } catch (err) {
-        console.error('点赞失败:', err)
-      }
-    }
-  }
-
-  const renderContent = (content) => {
-    if (!content) return null
-    return content.split('\n').map((line, index) => {
-      const keyPrefix = line.substring(0, 50)
-      const uniqueKey = `${keyPrefix}-${index}`
-
-      if (line.startsWith('# ')) {
-        return <h1 key={uniqueKey} className="text-3xl font-bold text-white mb-4 mt-6">{line.slice(2)}</h1>
-      }
-      if (line.startsWith('## ')) {
-        return <h2 key={uniqueKey} className="text-2xl font-bold text-white mb-3 mt-5">{line.slice(3)}</h2>
-      }
-      if (line.startsWith('### ')) {
-        return <h3 key={uniqueKey} className="text-xl font-bold text-white mb-2 mt-4">{line.slice(4)}</h3>
-      }
-      if (line.startsWith('- ')) {
-        return <li key={uniqueKey} className="text-dark-200 ml-4 mb-1 list-disc">{line.slice(2)}</li>
-      }
-      if (line.trim() === '') {
-        return <br key={uniqueKey} />
-      }
-      const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
-      if (imgMatch) {
-        return <img key={uniqueKey} src={imgMatch[2]} alt={imgMatch[1]} className="max-w-full rounded-lg my-4" />
-      }
-      return <p key={uniqueKey} className="text-dark-200 mb-3 leading-relaxed">{line}</p>
+    const controller = new AbortController()
+    setArticle(null)
+    setError('')
+    setLiked(false)
+    apiFetch(`/api/articles/${encodeURIComponent(slug)}`, {
+      signal: controller.signal
     })
+      .then((r) => {
+        if (!r.ok) throw Error(r.status === 404 ? '文章未找到' : '文章加载失败')
+        return r.json()
+      })
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setArticle(data)
+        apiFetch(`/api/stats/article/${data.id}/likes`, {
+          signal: controller.signal
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((stats) => {
+            if (stats)
+              setArticle((current) =>
+                current?.id === data.id
+                  ? { ...current, likes: stats.likes }
+                  : current
+              )
+          })
+          .catch(() => {})
+        apiFetch(`/api/stats/article/${data.id}/views`, {
+          method: 'POST',
+          signal: controller.signal
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((stats) => {
+            if (stats)
+              setArticle((current) =>
+                current?.id === data.id
+                  ? { ...current, views: stats.views }
+                  : current
+              )
+          })
+          .catch(() => {})
+      })
+      .catch((e) => {
+        if (e.name !== 'AbortError') setError(e.message)
+      })
+    return () => controller.abort()
+  }, [slug, retry])
+  const like = async () => {
+    try {
+      const r = await apiFetch(`/api/stats/article/${article.id}/likes`, {
+        method: 'POST'
+      })
+      if (!r.ok) throw Error('点赞失败，请稍后重试')
+      const data = await r.json()
+      setArticle((a) => ({ ...a, likes: data.likes }))
+      setLiked(true)
+    } catch (e) {
+      setError(e.message)
+    }
   }
-
+  if (!article)
+    return (
+      <section>
+        {error ? (
+          <>
+            <h1>{error}</h1>
+            <button onClick={() => setRetry((n) => n + 1)}>重试</button>
+            <Link to="/">返回首页</Link>
+          </>
+        ) : (
+          <p role="status">正在加载文章…</p>
+        )}
+      </section>
+    )
+  const words = Array.from((article.content || '').replace(/\s/g, '')).length
   return (
-    <article className="min-h-screen pt-20 pb-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 text-dark-400 hover:text-gold mb-8 transition-colors group"
-        >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span>返回文章列表</span>
+    <article>
+      <Link to="/">返回文章列表</Link>
+      {user?.role === 'admin' && (
+        <Link to={`/studio/editor/${article.id}`}>编辑文章</Link>
+      )}
+      <header>
+        <h1>{article.title}</h1>
+        <time dateTime={article.publish_date || article.publishDate}>
+          {article.publish_date || article.publishDate}
+        </time>
+        <p>
+          {words} 字 · 约 {Math.max(1, Math.ceil(words / 400))} 分钟 ·{' '}
+          {article.views || 0} 阅读
+        </p>
+        <button onClick={like} disabled={liked}>
+          {article.likes || 0} 喜欢{liked ? ' · 已点赞' : ''}
         </button>
-
-        <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-            {article.title}
-          </h1>
-          
-          <div className="flex flex-wrap items-center gap-4 text-sm text-dark-400">
-            {article.publishDate && (
-              <div className="flex items-center gap-1.5">
-                <Calendar size={14} />
-                <span>{article.publishDate}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <Eye size={14} />
-              <span>{views} 阅读</span>
-            </div>
-            <button 
-              onClick={handleLike}
-              className={`flex items-center gap-1.5 transition-colors ${isLiked ? 'text-red-400' : 'hover:text-red-400'}`}
+        <p>
+          {(article.tags || []).map((tag) => (
+            <Link
+              className="mr-3"
+              key={tag}
+              to={`/tag/${encodeURIComponent(tag)}`}
             >
-              <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
-              <span>{likes} 喜欢</span>
-            </button>
-            <div className="flex items-center gap-1.5">
-              <MessageSquare size={14} />
-              <span>评论</span>
-            </div>
-            {article.author && (
-              <div className="flex items-center gap-1.5">
-                <span>作者: {article.author}</span>
-              </div>
-            )}
-          </div>
-
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {article.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1 px-3 py-1 bg-gold/10 text-gold rounded-full text-sm border border-gold/20"
-                >
-                  <Tag size={12} />
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </header>
-
-        <div className="mb-8">
-          <div className="prose prose-invert max-w-none">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
-              </div>
-            ) : (
-              renderContent(fullArticle.content)
-            )}
-          </div>
-        </div>
-
-        <CommentSection articleId={article.id} />
-      </div>
+              #{tag}
+            </Link>
+          ))}
+        </p>
+      </header>
+      {error && <p role="alert">{error}</p>}
+      <MarkdownContent content={article.content} />
+      <CommentSection key={article.id} articleId={article.id} />
     </article>
   )
 }

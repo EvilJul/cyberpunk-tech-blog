@@ -4,22 +4,12 @@ import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { ThemeProvider } from './themes/ThemeProvider'
 import './index.css'
+import { reportError } from './utils/logger'
 
-window.addEventListener('error', (e) => {
-  fetch('/api/logs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ level: 'ERROR', message: '全局错误', data: { message: e.message, filename: e.filename, lineno: e.lineno } })
-  }).catch(() => {})
-})
-
-window.addEventListener('unhandledrejection', (e) => {
-  fetch('/api/logs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ level: 'ERROR', message: 'Promise错误', data: { reason: String(e.reason) } })
-  }).catch(() => {})
-})
+window.addEventListener('error', (e) => reportError(e.message))
+window.addEventListener('unhandledrejection', (e) =>
+  reportError(String(e.reason))
+)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <SettingsProvider>

@@ -1,7 +1,13 @@
+import { useLocation } from 'react-router-dom'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 
 export default function SearchBar({ onSearch, onComposingChange }) {
+  const location = useLocation()
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('focus') === 'search')
+      inputRef.current?.focus()
+  }, [location.key])
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef(null)
@@ -17,7 +23,12 @@ export default function SearchBar({ onSearch, onComposingChange }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === '/' && !focused && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if (
+        e.key === '/' &&
+        !focused &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
         e.preventDefault()
         inputRef.current?.focus()
       }
@@ -26,48 +37,62 @@ export default function SearchBar({ onSearch, onComposingChange }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [focused])
 
-  const handleInputKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      if (query) {
-        e.preventDefault()
-        handleClear()
-      } else {
-        // query 可能因 React 状态不同步而为空，但 onSearch 仍需清空
-        if (onSearch) onSearch('')
-        inputRef.current?.blur()
-        setFocused(false)
+  const handleInputKeyDown = useCallback(
+    (e) => {
+      if (e.key === 'Escape') {
+        if (query) {
+          e.preventDefault()
+          handleClear()
+        } else {
+          // query 可能因 React 状态不同步而为空，但 onSearch 仍需清空
+          if (onSearch) onSearch('')
+          inputRef.current?.blur()
+          setFocused(false)
+        }
       }
-    }
-  }, [query, handleClear, onSearch])
+    },
+    [query, handleClear, onSearch]
+  )
 
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault()
-    if (onSearch) onSearch(query)
-  }, [query, onSearch])
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault()
+      if (onSearch) onSearch(query)
+    },
+    [query, onSearch]
+  )
 
-  const handleChange = useCallback((e) => {
-    setQuery(e.target.value)
-    if (!isComposing.current && onSearch) {
-      onSearch(e.target.value)
-    }
-  }, [onSearch])
+  const handleChange = useCallback(
+    (e) => {
+      setQuery(e.target.value)
+      if (!isComposing.current && onSearch) {
+        onSearch(e.target.value)
+      }
+    },
+    [onSearch]
+  )
 
   const handleCompositionStart = useCallback(() => {
     isComposing.current = true
     if (onComposingChange) onComposingChange(true)
   }, [onComposingChange])
 
-  const handleCompositionEnd = useCallback((e) => {
-    isComposing.current = false
-    if (onComposingChange) onComposingChange(false)
-    if (onSearch) onSearch(e.target.value)
-  }, [onSearch, onComposingChange])
+  const handleCompositionEnd = useCallback(
+    (e) => {
+      isComposing.current = false
+      if (onComposingChange) onComposingChange(false)
+      if (onSearch) onSearch(e.target.value)
+    },
+    [onSearch, onComposingChange]
+  )
 
   return (
     <form onSubmit={handleSubmit} className="relative mb-6">
-      <div className={`glass-card flex items-center gap-3 px-4 py-3 transition-all duration-300 ${
-        focused ? 'border-gold/30 shadow-lg shadow-gold/10' : ''
-      }`}>
+      <div
+        className={`glass-card flex items-center gap-3 px-4 py-3 transition-all duration-300 ${
+          focused ? 'border-gold/30 shadow-lg shadow-gold/10' : ''
+        }`}
+      >
         <Search size={18} className="text-dark-400 flex-shrink-0" />
         <input
           ref={inputRef}

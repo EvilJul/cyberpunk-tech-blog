@@ -1,0 +1,131 @@
+.studio {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  min-height: 100vh;
+  color: #e8edf5;
+  background: #111722;
+}
+.studio header,
+.studio nav,
+.studio-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.studio header strong {
+  flex: 1;
+}
+.studio nav {
+  border-bottom: 1px solid #526074;
+  padding-bottom: 16px;
+}
+.studio a {
+  color: #9bd8ff;
+  text-decoration: underline;
+}
+.studio a.active {
+  color: white;
+  font-weight: 700;
+}
+.studio h1 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+.studio h2 {
+  font-size: 1.4rem;
+}
+.studio label {
+  display: block;
+  margin: 12px 0;
+}
+.studio input:not([type='checkbox']),
+.studio textarea,
+.studio select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  color: #f6f8fc;
+  background: #1a2434;
+  border: 1px solid #68778d;
+  border-radius: 5px;
+}
+.studio button {
+  border: 1px solid #748ba5;
+  padding: 8px 14px;
+  border-radius: 5px;
+  background: #233b54;
+  color: white;
+  cursor: pointer;
+}
+.studio button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.studio :focus-visible {
+  outline: 2px solid #9bd8ff;
+  outline-offset: 3px;
+}
+.studio [role='alert'] {
+  color: #ffb7b7;
+  white-space: pre-wrap;
+  margin: 12px 0;
+}
+.studio [role='status'] {
+  color: #aad9be;
+}
+.studio aside {
+  border: 1px solid #68778d;
+  padding: 16px;
+  margin: 16px 0;
+}
+.studio pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 400px;
+}
+.studio li {
+  padding: 12px 0;
+  border-bottom: 1px solid #354253;
+}
+.studio li button {
+  margin-inline-start: 12px;
+}
+.studio-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.studio textarea {
+  font-family: monospace;
+  resize: vertical;
+}
+.studio-preview {
+  background: #192230;
+  padding: 24px;
+  overflow-wrap: anywhere;
+}
+.studio-preview .back-top {
+  display: none;
+}
+@media (max-width: 600px) {
+  .studio {
+    padding: 16px;
+  }
+  .studio-actions button {
+    flex: 1 1 45%;
+  }
+}
+
+.studio [role='toolbar'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}

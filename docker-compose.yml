@@ -1,0 +1,71 @@
+x-blog: &blog
+  image: bolg:local
+  build:
+    context: .
+    args:
+      VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+  user: "1000:1000"
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 15s
+  environment: &environment
+    NODE_ENV: production
+    BLOG_DATA_DIR: /app/data
+    BLOG_BACKUP_DIR: /app/data/backups
+    JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+    JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+    SITE_URL: ${SITE_URL:-http://localhost:9098}
+    VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+    CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:9098}
+    ADMIN_CORS_ORIGINS: ${ADMIN_CORS_ORIGINS:-http://localhost:3033,http://127.0.0.1:3033}
+    TRUST_PROXY: ${TRUST_PROXY:-}
+    PUBLISHING_API_ENABLED: ${PUBLISHING_API_ENABLED:-false}
+    LEGACY_JWT_ENABLED: ${LEGACY_JWT_ENABLED:-true}
+    SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+    PUBLIC_PORT: "9098"
+    ADMIN_PORT: "3033"
+  volumes:
+    - blog-data:/app/data
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  public:
+    <<: *blog
+    ports:
+      - "${PUBLIC_BIND:-0.0.0.0}:${PUBLIC_PORT:-9098}:9098"
+
+  admin:
+    <<: *blog
+    profiles: ["legacy-admin"]
+    command: ["node", "server/index-admin.js"]
+    environment:
+      <<: *environment
+      ADMIN_HOST: 0.0.0.0
+      PUBLIC_API_URL: http://public:9098
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3033}:3033"
+    depends_on:
+      public:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3033/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  backup:
+    <<: *blog
+    command: ["node", "scripts/backup-daemon.js"]
+    depends_on:
+      public:
+        condition: service_healthy
+    # The scheduled worker has no HTTP listener; failures exit and are logged.
+    healthcheck:
+      disable: true
+
+volumes:
+  blog-data:

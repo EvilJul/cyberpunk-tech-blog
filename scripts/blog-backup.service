@@ -1,0 +1,14 @@
+[Unit]
+Description=Bolg SQLite online backup
+
+[Service]
+Type=oneshot
+User=blog
+Group=blog
+WorkingDirectory=/opt/blog
+EnvironmentFile=/etc/blog.env
+ExecStart=/usr/bin/node /opt/blog/scripts/backup-db.js
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/blog

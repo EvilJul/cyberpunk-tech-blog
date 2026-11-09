@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const router = express.Router()
-const dataDir = join(__dirname, '..', 'data')
+const dataDir = process.env.BLOG_DATA_DIR || join(__dirname, '..', 'data')
+fs.mkdirSync(dataDir, { recursive: true })
 const settingsFile = join(dataDir, 'settings.json')
 
 // 默认主题配置
@@ -80,10 +81,11 @@ const defaultSettings = {
   theme: defaultTheme
 }
 
-// 深度合并 theme 对象（防止部分字段丢失）
+/** 合并默认主题分组，同时保留用户已有的扩展主题字段。 */
 function mergeTheme(saved, defaults) {
   if (!saved) return defaults
   return {
+    ...saved,
     name: saved.name || defaults.name,
     preset: saved.preset || defaults.preset,
     background: { ...defaults.background, ...saved.background },
@@ -95,7 +97,7 @@ function mergeTheme(saved, defaults) {
 }
 
 // 读取设置
-function readSettings() {
+export function readSettings() {
   try {
     if (fs.existsSync(settingsFile)) {
       const data = fs.readFileSync(settingsFile, 'utf-8')

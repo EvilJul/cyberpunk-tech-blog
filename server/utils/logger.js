@@ -5,6 +5,7 @@ import { dirname } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const logsDir = process.env.BLOG_LOG_DIR || path.join(process.env.BLOG_DATA_DIR || path.join(__dirname, '..', 'data'), 'logs')
 
 // 自定义日志格式
 const logFormat = winston.format.combine(
@@ -35,14 +36,14 @@ const logger = winston.createLogger({
   transports: [
     // 错误日志
     new winston.transports.File({
-      filename: path.join(__dirname, '..', 'logs', 'error.log'),
+      filename: path.join(logsDir, 'error.log'),
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5
     }),
     // 所有日志
     new winston.transports.File({
-      filename: path.join(__dirname, '..', 'logs', 'combined.log'),
+      filename: path.join(logsDir, 'combined.log'),
       maxsize: 5242880,
       maxFiles: 5
     })

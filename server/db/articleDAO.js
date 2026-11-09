@@ -1,4 +1,14 @@
 import db from './index.js'
+import { createHash } from 'node:crypto'
+
+// SQLite length 按字符计数；排除空格、ASCII 空白、不换行空格和中文全角空格。
+// 基于正文而非摘要，列表仅返回计数，不返回正文。
+const wordCountSql = [32, 9, 10, 11, 12, 13, 160, 12288].reduce(
+  /* 逐项剔除正文中的空白字符以生成字数统计SQL。 */ (sql, code) => `replace(${sql}, char(${code}), '')`,
+  "COALESCE(a.content, '')"
+)
+const readingMetricsSql = `length(${wordCountSql}) AS word_count,
+  MAX(1, CAST((length(${wordCountSql}) + 399) / 400 AS INTEGER)) AS reading_minutes`
 
 /**
  * 文章 DAO
@@ -8,14 +18,11 @@ export class ArticleDAO {
    * 清理 FTS5 查询字符串，转义特殊字符
    */
   static sanitizeFtsQuery(query) {
-    // 移除 FTS5 特殊字符: " ' * ( ) : ^ ~
-    let sanitized = query.replace(/["'*:()^~\[\]]/g, ' ')
-    // 将连续空白压缩为单个空格
-    sanitized = sanitized.replace(/\s+/g, ' ').trim()
-    if (!sanitized) return ''
-    // 每个词加上后缀通配符 * 以支持部分匹配
-    return sanitized.split(' ').map(w => `"${w}"`).join(' OR ')
+    if (typeof query !== 'string') return ''
+    const words = query.match(/[\p{L}\p{N}]+/gu) || []
+    return words.map(/* 将搜索词转换为带引号的FTS查询项。 */ (word) => `"${word}"`).join(' OR ')
   }
+
   /**
    * 创建文章
    */
@@ -53,15 +60,21 @@ export class ArticleDAO {
   }
 
   /**
-   * 根据 ID 查询文章
+   * 根据 ID 查询文章（含 views/likes，未产生统计时为 0；调用方负责发布权限）
    */
   static findById(id) {
-    const article = db.prepare(`
-      SELECT a.*, c.name as category
+    const article = db
+      .prepare(
+        `
+      SELECT a.*, c.name as category, COALESCE(s.views, 0) AS views, COALESCE(s.likes, 0) AS likes, m.url AS cover_image, ${readingMetricsSql}
       FROM articles a
       LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN article_stats s ON s.article_id = a.id
+      LEFT JOIN integration_media m ON m.id = a.cover_media_id
       WHERE a.id = ?
-    `).get(id)
+    `
+      )
+      .get(id)
 
     if (article) {
       article.tags = this.getTags(id)
@@ -71,15 +84,21 @@ export class ArticleDAO {
   }
 
   /**
-   * 根据 slug 查询文章
+   * 根据 slug 查询文章（含 views/likes，未产生统计时为 0；调用方负责发布权限）
    */
   static findBySlug(slug) {
-    const article = db.prepare(`
-      SELECT a.*, c.name as category
+    const article = db
+      .prepare(
+        `
+      SELECT a.*, c.name as category, COALESCE(s.views, 0) AS views, COALESCE(s.likes, 0) AS likes, m.url AS cover_image, ${readingMetricsSql}
       FROM articles a
       LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN article_stats s ON s.article_id = a.id
+      LEFT JOIN integration_media m ON m.id = a.cover_media_id
       WHERE a.slug = ?
-    `).get(slug)
+    `
+      )
+      .get(slug)
 
     if (article) {
       article.tags = this.getTags(article.id)
@@ -91,7 +110,20 @@ export class ArticleDAO {
   /**
    * 分页查询文章
    */
-  static findAll({ page = 1, perPage = 10, category, tag, search, status, sort = 'publish_date', order = 'DESC' }) {
+  static findAll({
+    page = 1,
+    perPage = 10,
+    category,
+    tag,
+    search,
+    status,
+    includeDrafts = false,
+    sort = 'publish_date',
+    order = 'DESC'
+  } = {}) {
+    page = Math.max(1, Math.floor(Number(page)) || 1)
+    perPage = Math.min(100, Math.max(1, Math.floor(Number(perPage)) || 10))
+    if (!includeDrafts) status = 'published'
     const offset = (page - 1) * perPage
     const params = []
     const whereConditions = []
@@ -118,18 +150,34 @@ export class ArticleDAO {
       params.push(tag)
     }
 
-    // 搜索筛选（使用 FTS5 全文搜索）
-    if (search) {
+    // 先在相同可见性与筛选范围探测 FTS，未命中才执行字面 LIKE。
+    if (search !== undefined && search !== '') {
       const ftsQuery = this.sanitizeFtsQuery(search)
-      if (ftsQuery) {
-        whereConditions.push(`a.rowid IN (
-          SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?
-        )`)
-        params.push(ftsQuery)
+      const match =
+        'a.rowid IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?)'
+      if (!ftsQuery) whereConditions.push('0')
+      else {
+        const scope = [...whereConditions, match].join(' AND ')
+        const hit = db
+          .prepare(
+            `SELECT 1 FROM articles a LEFT JOIN categories c ON c.id = a.category_id WHERE ${scope} LIMIT 1`
+          )
+          .get(...params, ftsQuery)
+        if (hit) {
+          whereConditions.push(match)
+          params.push(ftsQuery)
+        } else {
+          const literal = search.replace(/[\\%_]/g, /* 转义LIKE通配符及转义符以执行字面搜索。 */ (value) => '\\' + value)
+          whereConditions.push(
+            "(a.title LIKE ? ESCAPE '\\' OR a.content LIKE ? ESCAPE '\\' OR a.excerpt LIKE ? ESCAPE '\\')"
+          )
+          params.push(...Array(3).fill('%' + literal + '%'))
+        }
       }
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    const whereClause =
+      whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
 
     // 查询总数
     const countStmt = db.prepare(`
@@ -141,29 +189,37 @@ export class ArticleDAO {
     const { count: total } = countStmt.get(...params)
 
     // 查询数据
-    const validSortFields = ['publish_date', 'update_date', 'title', 'created_at']
+    const validSortFields = [
+      'publish_date',
+      'update_date',
+      'title',
+      'created_at'
+    ]
     const sortField = validSortFields.includes(sort) ? sort : 'publish_date'
-    const orderDir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+    const orderDir = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
 
     const stmt = db.prepare(`
       SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.status, a.publish_date, a.update_date, c.name as category,
-             GROUP_CONCAT(t.name, ',') as tags_concat
+             COALESCE(s.views, 0) AS views, COALESCE(s.likes, 0) AS likes,
+             ${readingMetricsSql},
+             json_group_array(t.name) FILTER (WHERE t.name IS NOT NULL) AS tags_json
       FROM articles a
       LEFT JOIN categories c ON a.category_id = c.id
       LEFT JOIN article_tags at ON a.id = at.article_id
       LEFT JOIN tags t ON at.tag_id = t.id
+      LEFT JOIN article_stats s ON s.article_id = a.id
       ${whereClause}
       GROUP BY a.id
-      ORDER BY a.${sortField} ${orderDir}
+      ORDER BY a.${sortField} ${orderDir}, a.id ASC
       LIMIT ? OFFSET ?
     `)
 
     const articles = stmt.all(...params, perPage, offset)
 
     // 处理标签字段
-    articles.forEach(article => {
-      article.tags = article.tags_concat ? article.tags_concat.split(',') : []
-      delete article.tags_concat
+    articles.forEach(/* 解析列表标签数组并移除内部聚合字段。 */ (article) => {
+      article.tags = JSON.parse(article.tags_json || '[]')
+      delete article.tags_json
     })
 
     return {
@@ -182,48 +238,17 @@ export class ArticleDAO {
   /**
    * 全文搜索
    */
-  static search(query, page = 1, perPage = 10) {
-    const offset = (page - 1) * perPage
-
-    // 使用 FTS5 搜索
-    const stmt = db.prepare(`
-      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.publish_date, c.name as category,
-             snippet(articles_fts, 1, '<mark>', '</mark>', '...', 30) as highlight,
-             GROUP_CONCAT(t.name, ',') as tags_concat
-      FROM articles_fts
-      JOIN articles a ON articles_fts.rowid = a.rowid
-      LEFT JOIN categories c ON a.category_id = c.id
-      LEFT JOIN article_tags at ON a.id = at.article_id
-      LEFT JOIN tags t ON at.tag_id = t.id
-      WHERE articles_fts MATCH ?
-      GROUP BY a.id
-      ORDER BY rank
-      LIMIT ? OFFSET ?
-    `)
-
-    const articles = stmt.all(query, perPage, offset)
-
-    // 查询总数
-    const countStmt = db.prepare(`
-      SELECT COUNT(*) as count FROM articles_fts WHERE articles_fts MATCH ?
-    `)
-    const { count: total } = countStmt.get(query)
-
-    // 处理标签字段
-    articles.forEach(article => {
-      article.tags = article.tags_concat ? article.tags_concat.split(',') : []
-      delete article.tags_concat
+  static search(query, page = 1, perPage = 10, options = {}) {
+    const result = this.findAll({
+      ...options,
+      search: typeof query === 'string' && query.trim() ? query.trim() : '!!!',
+      page,
+      perPage
     })
-
-    return {
-      data: articles,
-      pagination: {
-        page: parseInt(page),
-        per_page: parseInt(perPage),
-        total,
-        total_pages: Math.ceil(total / perPage)
-      }
-    }
+    result.data.forEach(/* 为兼容搜索结果提供摘要高亮字段。 */ (article) => {
+      article.highlight = article.excerpt || ''
+    })
+    return result
   }
 
   /**
@@ -238,7 +263,10 @@ export class ArticleDAO {
 
     Object.entries(articleData).forEach(([key, value]) => {
       if (value !== undefined) {
-        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+        const snakeKey = key.replace(
+          /[A-Z]/g,
+          (letter) => `_${letter.toLowerCase()}`
+        )
         fields.push(`${snakeKey} = ?`)
         values.push(value)
       }
@@ -290,7 +318,7 @@ export class ArticleDAO {
       JOIN article_tags at ON t.id = at.tag_id
       WHERE at.article_id = ?
     `)
-    return stmt.all(articleId).map(row => row.name)
+    return stmt.all(articleId).map((row) => row.name)
   }
 
   /**
@@ -299,60 +327,63 @@ export class ArticleDAO {
   static addTags(articleId, tagNames) {
     if (!Array.isArray(tagNames) || tagNames.length === 0) return
 
-    const insertTagStmt = db.prepare(`
-      INSERT OR IGNORE INTO tags (name, slug, created_at)
-      VALUES (?, ?, ?)
-    `)
-
-    const getTagIdStmt = db.prepare('SELECT id FROM tags WHERE name = ?')
-    const linkStmt = db.prepare('INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)')
-
-    const now = Date.now()
-
-    tagNames.forEach(tagName => {
-      const slug = tagName.toLowerCase().replace(/\s+/g, '-')
-      insertTagStmt.run(tagName, slug, now)
-      const tag = getTagIdStmt.get(tagName)
-      if (tag) {
-        linkStmt.run(articleId, tag.id)
+    const findName = db.prepare('SELECT id FROM tags WHERE name = ?')
+    const findSlug = db.prepare('SELECT name FROM tags WHERE slug = ?')
+    const insert = db.prepare(
+      'INSERT INTO tags(name,slug,created_at) VALUES(?,?,?)'
+    )
+    const link = db.prepare(
+      'INSERT OR IGNORE INTO article_tags(article_id,tag_id) VALUES(?,?)'
+    )
+    for (const tagName of tagNames) {
+      let tag = findName.get(tagName)
+      if (!tag) {
+        const base = tagName.toLowerCase().replace(/\s+/g, '-') || 'tag'
+        let slug = base,
+          counter = 0
+        while (findSlug.get(slug)) {
+          const suffix = createHash('sha256')
+            .update(`${tagName}:${counter++}`)
+            .digest('hex')
+            .slice(0, 10)
+          slug = `${base}-${suffix}`
+        }
+        const result = insert.run(tagName, slug, Date.now())
+        tag = { id: result.lastInsertRowid }
       }
-    })
+      link.run(articleId, tag.id)
+    }
   }
 
   /**
    * 获取统计信息
    */
-  static getStats() {
-    // 总数
-    const { total } = db.prepare('SELECT COUNT(*) as total FROM articles').get()
-
-    // 按分类统计
-    const categories = db.prepare(`
-      SELECT c.name, COUNT(a.id) as count
-      FROM categories c
-      LEFT JOIN articles a ON c.id = a.category_id
-      GROUP BY c.id, c.name
-      ORDER BY count DESC
-    `).all()
-
-    // 按标签统计
-    const tags = db.prepare(`
-      SELECT t.name, COUNT(at.article_id) as count
-      FROM tags t
-      LEFT JOIN article_tags at ON t.id = at.tag_id
-      GROUP BY t.id, t.name
-      ORDER BY count DESC
-    `).all()
-
-    // 按月份统计
-    const months = db.prepare(`
-      SELECT substr(publish_date, 1, 7) as month, COUNT(*) as count
-      FROM articles
-      WHERE publish_date IS NOT NULL
-      GROUP BY month
-      ORDER BY month DESC
-    `).all()
-
+  static getStats({ includeDrafts = false } = {}) {
+    const where = includeDrafts ? '' : "WHERE status = 'published'"
+    const { total } = db
+      .prepare(`SELECT COUNT(*) AS total FROM articles ${where}`)
+      .get()
+    const categories = db
+      .prepare(
+        `SELECT c.name, COUNT(a.id) AS count FROM categories c
+      LEFT JOIN articles a ON a.category_id = c.id ${includeDrafts ? '' : "AND a.status = 'published'"}
+      GROUP BY c.id ORDER BY count DESC, c.name`
+      )
+      .all()
+    const tags = db
+      .prepare(
+        `SELECT t.name, COUNT(a.id) AS count FROM tags t
+      LEFT JOIN article_tags at ON at.tag_id = t.id
+      LEFT JOIN articles a ON a.id = at.article_id ${includeDrafts ? '' : "AND a.status = 'published'"}
+      GROUP BY t.id ORDER BY count DESC, t.name`
+      )
+      .all()
+    const months = db
+      .prepare(
+        `SELECT substr(publish_date, 1, 7) AS month, COUNT(*) AS count FROM articles
+      WHERE publish_date IS NOT NULL ${includeDrafts ? '' : "AND status = 'published'"} GROUP BY month ORDER BY month DESC`
+      )
+      .all()
     return { total, categories, tags, months }
   }
 }

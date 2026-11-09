@@ -1,12 +1,23 @@
 import express from 'express'
+import db from '../db/index.js'
+import {
+  legacyCreate,
+  legacyUpdate,
+  deleteArticle,
+  getWorkingCopy,
+  listWorkingCopies,
+  articleError
+} from '../services/articleService.js'
+import { authMiddleware, adminOnly, optionalAuth } from '../middleware/auth.js'
 import { ArticleDAO } from '../db/articleDAO.js'
 import logger from '../utils/logger.js'
 
 const router = express.Router()
 
-function generateId() {
-  return 'article-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-}
+router.use(optionalAuth)
+/** 将分页参数限制为指定范围内的正整数。 */
+const positiveInt = (value, fallback, max) =>
+  Math.min(max, Math.max(1, parseInt(value) || fallback))
 
 // 获取文章列表（支持分页、搜索、排序、筛选）
 router.get('/', async (req, res, next) => {
@@ -22,16 +33,21 @@ router.get('/', async (req, res, next) => {
       order = 'desc'
     } = req.query
 
-    const result = ArticleDAO.findAll({
-      page: parseInt(page),
-      perPage: parseInt(per_page),
+    const query = {
+      page: positiveInt(page, 1, 1000000),
+      perPage: positiveInt(per_page, 10, 100),
       category,
       tag,
       search,
-      status,
+      includeDrafts: req.user?.role === 'admin',
+      status: req.user?.role === 'admin' ? status : 'published',
       sort,
       order
-    })
+    }
+    const result =
+      req.user?.role === 'admin'
+        ? listWorkingCopies(query, { kind: 'user', ...req.user })
+        : ArticleDAO.findAll(query)
 
     logger.info('查询文章列表', { total: result.pagination.total })
     res.json(result)
@@ -45,11 +61,16 @@ router.get('/search/advanced', async (req, res, next) => {
   try {
     const { q, page = 1, per_page = 10 } = req.query
 
-    if (!q || !q.trim()) {
+    if (typeof q !== 'string' || !q.trim() || q.length > 500) {
       return res.status(400).json({ error: '搜索关键词不能为空' })
     }
 
-    const result = ArticleDAO.search(q, parseInt(page), parseInt(per_page))
+    const result = ArticleDAO.findAll({
+      search: q,
+      status: 'published',
+      page: positiveInt(page, 1, 1000000),
+      perPage: positiveInt(per_page, 10, 100)
+    })
 
     logger.info('全文搜索', { keyword: q, total: result.pagination.total })
     res.json({
@@ -67,7 +88,9 @@ router.get('/search/advanced', async (req, res, next) => {
 // 获取文章统计
 router.get('/stats/summary', async (req, res, next) => {
   try {
-    const stats = ArticleDAO.getStats()
+    const stats = ArticleDAO.getStats({
+      includeDrafts: req.user?.role === 'admin'
+    })
     res.json(stats)
   } catch (error) {
     next(error)
@@ -79,12 +102,19 @@ router.get('/by-id/:id', async (req, res, next) => {
   try {
     const article = ArticleDAO.findById(req.params.id)
 
-    if (!article) {
+    if (
+      !article ||
+      (article.status !== 'published' && req.user?.role !== 'admin')
+    ) {
       return res.status(404).json({ error: '文章未找到' })
     }
 
     logger.info('查询文章详情', { id: req.params.id })
-    res.json(article)
+    res.json(
+      req.user?.role === 'admin'
+        ? getWorkingCopy(article.id, { kind: 'user', ...req.user })
+        : article
+    )
   } catch (error) {
     next(error)
   }
@@ -95,131 +125,105 @@ router.get('/:slug', async (req, res, next) => {
   try {
     const article = ArticleDAO.findBySlug(req.params.slug)
 
-    if (!article) {
+    if (
+      !article ||
+      (article.status !== 'published' && req.user?.role !== 'admin')
+    ) {
       return res.status(404).json({ error: '文章未找到' })
     }
 
     // 公共访问只允许已发布文章
-    if (article.status !== 'published') {
+    if (article.status !== 'published' && req.user?.role !== 'admin') {
       return res.status(404).json({ error: '文章未找到' })
     }
 
     logger.info('查询文章详情', { slug: req.params.slug })
-    res.json(article)
+    res.json(
+      req.user?.role === 'admin'
+        ? getWorkingCopy(article.id, { kind: 'user', ...req.user })
+        : article
+    )
   } catch (error) {
     next(error)
   }
 })
 
-// 创建文章
-router.post('/', async (req, res, next) => {
+// Legacy JWT adapters remain isolated from browser sessions and integration keys.
+/** 仅提取旧接口允许写入且明确提供的文章字段。 */
+const legacyFields = (body) =>
+  Object.fromEntries(
+    ['title', 'slug', 'content', 'category', 'tags', 'excerpt', 'author']
+      .filter(/* 筛选请求中已提供的文章字段。 */ (key) => body[key] !== undefined)
+      .map(/* 将字段名和请求值组装为白名单键值对。 */ (key) => [key, body[key]])
+  )
+/** 为旧JWT写入构造用户访问主体。 */
+const actor = (req) => ({ kind: 'user', ...req.user, authMethod: 'legacy-jwt' })
+/** 校验旧接口的草稿或发布状态。 */
+const legacyStatus = (body) => {
+  if (
+    body.status !== undefined &&
+    !['draft', 'published'].includes(body.status)
+  )
+    throw articleError(400, 'INVALID_STATUS', '文章状态无效')
+  return body.status
+}
+router.post('/', authMiddleware, adminOnly, /* 通过共享服务适配旧接口创建文章，并记录兼容写入。 */ (req, res, next) => {
   try {
-    const { title, slug, content, category, tags, excerpt, author, status } = req.body
-
-    if (!title) {
-      return res.status(400).json({ error: '文章标题不能为空' })
-    }
-
-    // 查找或创建分类
-    let categoryId = null
-    if (category) {
-      const { CategoryDAO } = await import('../db/otherDAO.js')
-      let cat = CategoryDAO.findByName(category)
-      if (!cat) {
-        cat = CategoryDAO.create({ name: category })
-      }
-      categoryId = cat.id
-    }
-
-    const article = ArticleDAO.create({
-      id: generateId(),
-      title,
-      slug: slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-      content: content || '',
-      excerpt: excerpt || (content ? content.substring(0, 100) + '...' : ''),
-      author: author || '博主',
-      categoryId,
-      tags: tags || [],
-      status: status || 'draft',
-      publishDate: status === 'published' ? new Date().toISOString().split('T')[0] : null,
-      updateDate: new Date().toISOString().split('T')[0]
+    const body = req.body || {}
+    const result = legacyCreate(
+      legacyFields(body),
+      legacyStatus(body) || 'draft',
+      actor(req)
+    )
+    logger.warn('legacy-unconditional-create', {
+      userId: req.user.id,
+      articleId: result.id
     })
-
-    logger.info('创建文章', { id: article.id, title: article.title, status: article.status })
-    res.status(201).json(article)
+    res.status(201).json(result)
   } catch (error) {
     next(error)
   }
 })
-
-// 更新文章
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', authMiddleware, adminOnly, /* 通过共享服务适配旧接口更新文章及条件版本。 */ (req, res, next) => {
   try {
-    const { title, slug, content, category, tags, excerpt, author, status } = req.body
-
-    // 查找或创建分类
-    let categoryId = undefined
-    if (category !== undefined) {
-      const { CategoryDAO } = await import('../db/otherDAO.js')
-      if (category) {
-        let cat = CategoryDAO.findByName(category)
-        if (!cat) {
-          cat = CategoryDAO.create({ name: category })
-        }
-        categoryId = cat.id
-      } else {
-        categoryId = null
-      }
-    }
-
-    const updates = {}
-    if (title !== undefined) updates.title = title
-    if (slug !== undefined) updates.slug = slug
-    if (content !== undefined) updates.content = content
-    if (excerpt !== undefined) updates.excerpt = excerpt
-    if (author !== undefined) updates.author = author
-    if (categoryId !== undefined) updates.categoryId = categoryId
-    if (tags !== undefined) updates.tags = tags
-    if (status !== undefined) {
-      updates.status = status
-      // 状态变为published时设置publishDate
-      if (status === 'published') {
-        const existing = ArticleDAO.findById(req.params.id)
-        if (existing && !existing.publish_date) {
-          updates.publishDate = new Date().toISOString().split('T')[0]
-        }
-      }
-    }
-
-    updates.updateDate = new Date().toISOString().split('T')[0]
-
-    const article = ArticleDAO.update(req.params.id, updates)
-
-    if (!article) {
-      return res.status(404).json({ error: '文章未找到' })
-    }
-
-    logger.info('更新文章', { id: req.params.id, status: updates.status })
-    res.json(article)
+    const body = req.body || {}
+    const result = legacyUpdate(
+      req.params.id,
+      legacyFields(body),
+      legacyStatus(body),
+      req.get('If-Match'),
+      actor(req)
+    )
+    if (!req.get('If-Match'))
+      logger.warn('legacy-unconditional-update', {
+        userId: req.user.id,
+        articleId: result.id
+      })
+    res.json(result)
   } catch (error) {
     next(error)
   }
 })
-
-// 删除文章
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', authMiddleware, adminOnly, /* 通过共享服务适配旧接口删除文章，并兼容缺省版本。 */ (req, res, next) => {
   try {
-    const success = ArticleDAO.delete(req.params.id)
-
-    if (!success) {
-      return res.status(404).json({ error: '文章未找到' })
-    }
-
-    logger.info('删除文章', { id: req.params.id })
-    res.json({ success: true })
+    const current = db
+      .prepare('SELECT revision FROM articles WHERE id=?')
+      .get(req.params.id)
+    if (!current) throw articleError(404, 'NOT_FOUND', '文章未找到')
+    if (!req.get('If-Match'))
+      logger.warn('legacy-unconditional-delete', {
+        userId: req.user.id,
+        articleId: req.params.id
+      })
+    res.json(
+      deleteArticle(
+        req.params.id,
+        req.get('If-Match') || current.revision,
+        actor(req)
+      )
+    )
   } catch (error) {
     next(error)
   }
 })
-
 export default router

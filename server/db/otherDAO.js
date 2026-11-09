@@ -157,6 +157,14 @@ export class UserDAO {
  * 分类 DAO
  */
 export class CategoryDAO {
+  static update(id, { name }) {
+    return db.transaction(() => {
+      const result = db.prepare('UPDATE categories SET name = ?, slug = ? WHERE id = ?')
+        .run(name, name.toLowerCase().replace(/\s+/g, '-'), id)
+      return result.changes ? db.prepare('SELECT * FROM categories WHERE id = ?').get(id) : null
+    }).immediate()
+  }
+
   /**
    * 创建分类
    */
@@ -197,11 +205,11 @@ export class CategoryDAO {
   /**
    * 查询所有分类
    */
-  static findAll() {
+  static findAll({ includeDrafts = false } = {}) {
     const stmt = db.prepare(`
       SELECT c.*, COUNT(a.id) as count
       FROM categories c
-      LEFT JOIN articles a ON c.id = a.category_id
+      LEFT JOIN articles a ON c.id = a.category_id ${includeDrafts ? '' : "AND a.status = 'published'"}
       GROUP BY c.id
       ORDER BY c.name
     `)
@@ -212,8 +220,10 @@ export class CategoryDAO {
    * 删除分类
    */
   static delete(id) {
-    const stmt = db.prepare('DELETE FROM categories WHERE id = ?')
-    return stmt.run(id).changes > 0
+    return db.transaction(() => {
+      db.prepare('UPDATE articles SET category_id = NULL WHERE category_id = ?').run(id)
+      return db.prepare('DELETE FROM categories WHERE id = ?').run(id).changes > 0
+    }).immediate()
   }
 }
 
@@ -221,14 +231,30 @@ export class CategoryDAO {
  * 标签 DAO
  */
 export class TagDAO {
+  static update(id, { name }) {
+    return db.transaction(() => {
+      const result = db.prepare('UPDATE tags SET name = ?, slug = ? WHERE id = ?')
+        .run(name, name.toLowerCase().replace(/\s+/g, '-'), id)
+      return result.changes ? db.prepare('SELECT * FROM tags WHERE id = ?').get(id) : null
+    }).immediate()
+  }
+
+  static delete(id) {
+    return db.transaction(() => {
+      db.prepare('DELETE FROM article_tags WHERE tag_id = ?').run(id)
+      return db.prepare('DELETE FROM tags WHERE id = ?').run(id).changes > 0
+    }).immediate()
+  }
+
   /**
    * 查询所有标签
    */
-  static findAll() {
+  static findAll({ includeDrafts = false } = {}) {
     const stmt = db.prepare(`
-      SELECT t.*, COUNT(at.article_id) as count
+      SELECT t.*, COUNT(a.id) as count
       FROM tags t
       LEFT JOIN article_tags at ON t.id = at.tag_id
+      LEFT JOIN articles a ON a.id = at.article_id ${includeDrafts ? '' : "AND a.status = 'published'"}
       GROUP BY t.id
       ORDER BY count DESC, t.name
     `)

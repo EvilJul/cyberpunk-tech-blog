@@ -5,6 +5,20 @@ import logger from '../utils/logger.js'
  * 全局错误处理中间件
  */
 export function errorHandler(err, req, res, next) {
+  // v1 前置中间件同样遵守机器协议，不返回开发堆栈或原始错误内容。
+  if (req.path === '/api/v1' || req.path.startsWith('/api/v1/')) {
+    const status = err.statusCode || err.status || 500
+    logger.warn('发布请求被前置中间件拒绝', { status, request_id: req.id })
+    res.setHeader('Cache-Control', 'no-store')
+    return res.status(status).json({
+      error: {
+        code: status === 403 ? 'ORIGIN_REJECTED' : 'REQUEST_REJECTED',
+        message: status === 403 ? '请求来源不受信任' : '发布请求处理失败',
+        details: null
+      },
+      request_id: req.id
+    })
+  }
   // 处理 Multer 错误
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -26,8 +40,9 @@ export function errorHandler(err, req, res, next) {
     error: err.message,
     stack: err.stack,
     method: req.method,
-    url: req.url,
-    body: req.body,
+    url: req.path,
+    bodyKeys:
+      req.body && typeof req.body === 'object' ? Object.keys(req.body) : [],
     user: req.user?.username || 'anonymous',
     ip: req.ip
   })
@@ -37,8 +52,9 @@ export function errorHandler(err, req, res, next) {
 
   // 构造错误响应
   const errorResponse = {
+    request_id: req.id,
     error: {
-      message: err.message || '服务器内部错误',
+      message: statusCode >= 500 ? '服务器内部错误' : err.message || '请求失败',
       code: err.code || 'INTERNAL_ERROR',
       timestamp: new Date().toISOString()
     }
@@ -63,7 +79,7 @@ export function errorHandler(err, req, res, next) {
 export function notFoundHandler(req, res) {
   logger.warn('404 Not Found', {
     method: req.method,
-    url: req.url,
+    url: req.path,
     ip: req.ip
   })
 

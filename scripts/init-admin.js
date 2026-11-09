@@ -6,21 +6,13 @@
  * 非交互式: node scripts/init-admin.js --username admin --password 123456 --non-interactive
  */
 
+import 'dotenv/config'
 import readline from 'readline'
-import bcrypt from 'bcrypt'
-import Database from 'better-sqlite3'
-import fs from 'fs/promises'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 // 解析命令行参数
 function parseArgs() {
   const args = process.argv.slice(2)
   const parsed = {}
-  
+
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--username' && args[i + 1]) {
       parsed.username = args[++i]
@@ -30,15 +22,16 @@ function parseArgs() {
       parsed.nonInteractive = true
     }
   }
-  
+
   return parsed
 }
 
+/** 收集并校验凭据，通过共享首装服务创建本地管理员。 */
 async function main() {
   const args = parseArgs()
   let username = args.username
   let password = args.password
-  
+
   if (args.nonInteractive) {
     // 非交互式模式
     // 优先使用环境变量，其次命令行参数
@@ -47,7 +40,7 @@ async function main() {
       console.error('❌ 需要提供 --password 参数或 ADMIN_PASSWORD 环境变量')
       process.exit(1)
     }
-    
+
     if (password.length < 6) {
       console.error('❌ 密码长度至少6位')
       process.exit(1)
@@ -59,9 +52,10 @@ async function main() {
       output: process.stdout
     })
 
-    const question = (prompt) => new Promise((resolve) => {
-      rl.question(prompt, resolve)
-    })
+    const question = (prompt) =>
+      new Promise((resolve) => {
+        rl.question(prompt, resolve)
+      })
 
     console.log('\n🚀 博客系统初始化 - 创建管理员账号\n')
 
@@ -87,69 +81,45 @@ async function main() {
     }
   }
 
+  username = username?.trim()
+  if (
+    !username ||
+    username.length > 100 ||
+    typeof password !== 'string' ||
+    password.length > 1024
+  ) {
+    throw new Error('用户名需为 1–100 字符，密码不得超过 1024 字符')
+  }
   console.log('\n正在创建管理员账号...')
 
-  // 加密密码
-  const passwordHash = await bcrypt.hash(password, 10)
-
-  // 数据库路径
-  const dataDir = path.join(__dirname, '..', 'server', 'data')
-  const dbPath = path.join(dataDir, 'blog.db')
-
-  // 确保目录存在
-  await fs.mkdir(dataDir, { recursive: true })
-
-  // 连接数据库
-  const db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
-
-  // 创建用户表（如果不存在）
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'user',
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    )
-  `)
-
-  // 检查用户是否已存在
-  const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
-  if (existingUser) {
-    console.log(`ℹ️  用户 "${username}" 已存在，跳过创建`)
-    db.close()
-    process.exit(0)
+  // Use exactly the service schema and path resolution, including BLOG_DATA_DIR.
+  const { default: db, initDatabase } = await import('../server/db/index.js')
+  const { initializeLocalAdmin } =
+    await import('../server/services/setupService.js')
+  const { migrateAuthWorkspace } =
+    await import('../server/db/migrations/authWorkspace.js')
+  const { default: logger } = await import('../server/utils/logger.js')
+  try {
+    initDatabase()
+    migrateAuthWorkspace(db)
+    await initializeLocalAdmin({ username, password })
+  } finally {
+    if (db.open) db.close()
+    await new Promise(/* 等待日志流结束以完整释放初始化资源。 */ (resolve) => logger.end(resolve))
   }
-
-  // 创建用户
-  const userId = `user-${Date.now()}`
-  const now = Date.now()
-  
-  db.prepare(`
-    INSERT INTO users (id, username, password_hash, role, created_at, updated_at)
-    VALUES (?, ?, ?, 'admin', ?, ?)
-  `).run(userId, username, passwordHash, now, now)
-
-  db.close()
 
   console.log('\n✅ 管理员账号创建成功！')
   console.log(`   用户名: ${username}`)
   console.log(`   角色: 管理员`)
-  
+
   if (!args.nonInteractive) {
     console.log('\n📝 登录方式:')
-    console.log('   POST /api/auth/login')
-    console.log('   Body: { "username": "' + username + '", "password": "你的密码" }')
-    console.log('\n🔑 登录后会获得 JWT Token，在后续请求中携带：')
-    console.log('   Authorization: Bearer <token>')
+    console.log('   打开站点 /login，使用管理员账号登录工作台')
     console.log('')
   }
 }
 
-main().catch(err => {
+main().catch(/* 报告初始化失败并设置退出状态。 */ (err) => {
   console.error('❌ 错误:', err.message)
-  process.exit(1)
+  process.exitCode = 1
 })

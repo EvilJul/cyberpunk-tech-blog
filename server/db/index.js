@@ -1,12 +1,20 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
+import { migrateArticleWorkspace } from './migrations/articleWorkspace.js'
+import { migrateAuthWorkspace } from './migrations/authWorkspace.js'
+import { migratePublishing } from './migrations/publishing.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const dbPath = path.join(__dirname, '..', 'data', 'blog.db')
+export const dataDir = path.resolve(
+  process.env.BLOG_DATA_DIR || path.join(__dirname, '..', 'data')
+)
+fs.mkdirSync(dataDir, { recursive: true })
+export const dbPath = path.join(dataDir, 'blog.db')
 
 // 创建数据库连接
 const db = new Database(dbPath, {
@@ -18,6 +26,7 @@ db.pragma('foreign_keys = ON')
 
 // 启用 WAL 模式（更好的并发性能）
 db.pragma('journal_mode = WAL')
+db.pragma('busy_timeout = 5000')
 
 // 初始化数据库表结构
 export function initDatabase() {
@@ -86,8 +95,8 @@ export function initDatabase() {
   `)
 
   // 数据库迁移：为已有文章添加 status 字段
-  const tableInfo = db.prepare("PRAGMA table_info(articles)").all()
-  if (!tableInfo.some(col => col.name === 'status')) {
+  const tableInfo = db.prepare('PRAGMA table_info(articles)').all()
+  if (!tableInfo.some((col) => col.name === 'status')) {
     logger.info('数据库迁移：为 articles 表添加 status 字段')
     db.exec(`ALTER TABLE articles ADD COLUMN status TEXT DEFAULT 'published'`)
   }
@@ -107,6 +116,25 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_article_tags_article ON article_tags(article_id);
     CREATE INDEX IF NOT EXISTS idx_article_tags_tag ON article_tags(tag_id);
+  `)
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS article_stats (
+      article_id TEXT PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+      views INTEGER NOT NULL DEFAULT 0 CHECK(views >= 0),
+      likes INTEGER NOT NULL DEFAULT 0 CHECK(likes >= 0)
+    );
+    CREATE TABLE IF NOT EXISTS site_stats (
+      id INTEGER PRIMARY KEY CHECK(id = 1), views INTEGER NOT NULL DEFAULT 0 CHECK(views >= 0)
+    );
+    INSERT OR IGNORE INTO site_stats(id, views) VALUES(1, 0);
+    CREATE TABLE IF NOT EXISTS article_likes (
+      article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+      source_hash TEXT NOT NULL, PRIMARY KEY(article_id, source_hash)
+    );
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY, applied_at INTEGER NOT NULL, details TEXT
+    );
   `)
 
   // 评论表
@@ -145,16 +173,33 @@ export function initDatabase() {
       VALUES (new.rowid, new.title, new.content, new.excerpt);
     END;
 
-    CREATE TRIGGER IF NOT EXISTS articles_fts_delete AFTER DELETE ON articles BEGIN
-      DELETE FROM articles_fts WHERE rowid = old.rowid;
+    DROP TRIGGER IF EXISTS articles_fts_delete;
+    CREATE TRIGGER articles_fts_delete AFTER DELETE ON articles BEGIN
+      INSERT INTO articles_fts(articles_fts, rowid, title, content, excerpt)
+      VALUES ('delete', old.rowid, old.title, old.content, old.excerpt);
     END;
 
-    CREATE TRIGGER IF NOT EXISTS articles_fts_update AFTER UPDATE ON articles BEGIN
-      DELETE FROM articles_fts WHERE rowid = old.rowid;
+    DROP TRIGGER IF EXISTS articles_fts_update;
+    CREATE TRIGGER articles_fts_update AFTER UPDATE ON articles BEGIN
+      INSERT INTO articles_fts(articles_fts, rowid, title, content, excerpt)
+      VALUES ('delete', old.rowid, old.title, old.content, old.excerpt);
       INSERT INTO articles_fts(rowid, title, content, excerpt)
       VALUES (new.rowid, new.title, new.content, new.excerpt);
     END;
   `)
+
+  db.transaction(/* 原子重建旧版FTS索引并记录一次性迁移版本。 */ () => {
+    if (
+      !db
+        .prepare('SELECT 1 FROM schema_migrations WHERE version = ?')
+        .get('fts-delete-v2')
+    ) {
+      db.exec("INSERT INTO articles_fts(articles_fts) VALUES('rebuild')")
+      db.prepare(
+        'INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)'
+      ).run('fts-delete-v2', Date.now())
+    }
+  })()
 
   // 添加性能优化索引
   db.exec(`
@@ -163,6 +208,11 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_comments_article_status ON comments(article_id, status);
   `)
 
+  db.transaction(/* 在同一立即事务中迁移认证、文章工作副本及发布结构。 */ () => {
+    migrateAuthWorkspace(db)
+    migrateArticleWorkspace(db)
+    migratePublishing(db)
+  }).immediate()
   logger.info('数据库初始化完成')
 }
 

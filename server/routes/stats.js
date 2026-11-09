@@ -1,81 +1,34 @@
 import express from 'express'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { createHmac, randomBytes } from 'node:crypto'
+import rateLimit from 'express-rate-limit'
+import { StatsDAO } from '../db/statsDAO.js'
+import { optionalAuth } from '../middleware/auth.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 const router = express.Router()
-
-const statsFile = join(__dirname, '..', 'data', 'stats.json')
-
-function readStats() {
-  try {
-    const data = fs.readFileSync(statsFile, 'utf8')
-    return JSON.parse(data)
-  } catch (error) {
-    return { views: 0, likes: {}, articleViews: {} }
-  }
+const salt = process.env.STATS_SOURCE_SALT || process.env.JWT_SECRET || randomBytes(32).toString('hex')
+const positive = (value, fallback) => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : fallback
+const writes = rateLimit({
+  windowMs: positive(process.env.STATS_RATE_WINDOW_MS, 15 * 60 * 1000),
+  max: positive(process.env.STATS_RATE_LIMIT, 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '统计请求过于频繁' }
+})
+router.use(optionalAuth)
+router.get('/views', (req, res) => res.json({ views: StatsDAO.siteViews() }))
+router.post('/views', writes, (req, res) => res.json({ views: StatsDAO.incrementSiteViews() }))
+for (const field of ['views', 'likes']) {
+  router.get(`/article/:id/${field}`, (req, res) => {
+    const stats = StatsDAO.article(req.params.id, { includeDrafts: req.user?.role === 'admin' })
+    if (!stats) return res.status(404).json({ error: '文章未找到' })
+    res.json({ [field]: stats[field] })
+  })
+  router.post(`/article/:id/${field}`, writes, (req, res) => {
+    const source = createHmac('sha256', salt).update(req.ip || req.socket.remoteAddress || 'unknown').digest('hex')
+    const stats = field === 'views' ? StatsDAO.incrementViews(req.params.id) : StatsDAO.like(req.params.id, source)
+    if (!stats) return res.status(404).json({ error: '文章未找到' })
+    res.json(stats)
+  })
 }
-
-function writeStats(data) {
-  fs.writeFileSync(statsFile, JSON.stringify(data, null, 2))
-}
-
-// 获取总访问量
-router.get('/views', (req, res) => {
-  const stats = readStats()
-  res.json({ views: stats.views })
-})
-
-// 增加访问量
-router.post('/views', (req, res) => {
-  const stats = readStats()
-  stats.views += 1
-  writeStats(stats)
-  res.json({ views: stats.views })
-})
-
-// 获取文章访问量
-router.get('/article/:id/views', (req, res) => {
-  const stats = readStats()
-  const views = stats.articleViews[req.params.id] || 0
-  res.json({ views })
-})
-
-// 增加文章访问量
-router.post('/article/:id/views', (req, res) => {
-  const stats = readStats()
-  if (!stats.articleViews[req.params.id]) {
-    stats.articleViews[req.params.id] = 0
-  }
-  stats.articleViews[req.params.id] += 1
-  writeStats(stats)
-  res.json({ views: stats.articleViews[req.params.id] })
-})
-
-// 获取文章点赞数
-router.get('/article/:id/likes', (req, res) => {
-  const stats = readStats()
-  const likes = stats.likes[req.params.id] || 0
-  res.json({ likes })
-})
-
-// 增加文章点赞数
-router.post('/article/:id/likes', (req, res) => {
-  const stats = readStats()
-  if (!stats.likes[req.params.id]) {
-    stats.likes[req.params.id] = 0
-  }
-  stats.likes[req.params.id] += 1
-  writeStats(stats)
-  res.json({ likes: stats.likes[req.params.id] })
-})
-
-// 获取所有统计数据
-router.get('/all', (req, res) => {
-  const stats = readStats()
-  res.json(stats)
-})
-
+router.get('/all', (req, res) => res.json(StatsDAO.all({ includeDrafts: req.user?.role === 'admin' })))
 export default router

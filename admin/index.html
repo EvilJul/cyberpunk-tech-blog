@@ -5,816 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>博客管理后台</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif; 
-      background: #111113; 
-      color: #e8e8ec;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-    
-    .container { 
-      display: flex; 
-      min-height: 100vh;
-    }
-    
-    /* 侧边栏 */
-    .sidebar {
-      width: 240px;
-      background: #16161a;
-      padding: 20px 12px;
-      border-right: 1px solid #27272a;
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      z-index: 100;
-    }
-    
-    .logo { 
-      font-size: 15px; 
-      font-weight: 600; 
-      margin-bottom: 28px;
-      padding: 0 10px;
-      color: #fafafa;
-      letter-spacing: -0.3px;
-    }
-    
-    .nav-section {
-      margin-bottom: 20px;
-    }
-    
-    .nav-section-title {
-      font-size: 11px;
-      font-weight: 500;
-      color: #71717a;
-      padding: 0 10px;
-      margin-bottom: 6px;
-    }
-    
-    .nav-item { 
-      padding: 8px 10px; 
-      cursor: pointer; 
-      border-radius: 6px; 
-      margin-bottom: 2px;
-      color: #a1a1aa;
-      font-size: 13px;
-      font-weight: 400;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: background 0.15s, color 0.15s;
-    }
-    
-    .nav-item:hover { 
-      background: #27272a; 
-      color: #fafafa; 
-    }
-    
-    .nav-item.active { 
-      background: #27272a; 
-      color: #fafafa; 
-    }
-    
-    .nav-icon {
-      width: 16px;
-      height: 16px;
-      opacity: 0.5;
-      flex-shrink: 0;
-    }
-    
-    .nav-item.active .nav-icon,
-    .nav-item:hover .nav-icon {
-      opacity: 0.8;
-    }
-    
-    .sidebar-footer {
-      margin-top: auto;
-      padding-top: 16px;
-      border-top: 1px solid #27272a;
-    }
-    
-    .sidebar-footer .nav-item {
-      font-size: 12px;
-    }
-    
-    /* 主内容区 */
-    .main {
-      flex: 1;
-      margin-left: 240px;
-      padding: 28px 32px;
-      background: #111113;
-      min-height: 100vh;
-    }
-    
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      margin-bottom: 24px;
-    }
-    
-    .header h2 {
-      font-size: 20px;
-      font-weight: 600;
-      color: #fafafa;
-      letter-spacing: -0.3px;
-    }
-    
-    .header-subtitle {
-      font-size: 13px;
-      color: #71717a;
-      margin-top: 2px;
-    }
-    
-    /* 卡片 */
-    .card { 
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-    
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #27272a;
-    }
-    
-    .card-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: #fafafa;
-    }
-    
-    /* 统计卡片 */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    
-    .stat-card {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-    
-    .stat-card:hover {
-      border-color: #3f3f46;
-    }
-    
-    .stat-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 10px;
-      background: #27272a;
-      color: #a1a1aa;
-    }
-    
-    .stat-value {
-      font-size: 24px;
-      font-weight: 600;
-      color: #fafafa;
-      margin-bottom: 2px;
-      letter-spacing: -0.5px;
-    }
-    
-    .stat-label {
-      font-size: 12px;
-      color: #71717a;
-    }
-    
-    /* 按钮 */
-    .btn { 
-      padding: 8px 16px; 
-      border: none; 
-      border-radius: 6px; 
-      cursor: pointer; 
-      font-weight: 500;
-      font-size: 13px;
-      transition: background 0.15s, border-color 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    
-    .btn-primary { 
-      background: #fafafa; 
-      color: #18181b;
-    }
-    
-    .btn-primary:hover {
-      background: #e4e4e7;
-    }
-    
-    .btn-secondary {
-      background: transparent;
-      color: #a1a1aa;
-      border: 1px solid #3f3f46;
-    }
-    
-    .btn-secondary:hover {
-      background: #27272a;
-      color: #fafafa;
-    }
-    
-    .btn-danger { 
-      background: transparent; 
-      color: #ef4444;
-      border: 1px solid #3f3f46;
-    }
-    
-    .btn-danger:hover {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.3);
-    }
-    
-    .btn-sm { 
-      padding: 5px 10px; 
-      font-size: 12px; 
-      border-radius: 5px;
-    }
-    
-    /* 表单 */
-    input, textarea, select { 
-      width: 100%; 
-      padding: 9px 12px; 
-      background: #18181b; 
-      border: 1px solid #27272a; 
-      border-radius: 6px; 
-      color: #fafafa; 
-      margin-bottom: 12px;
-      font-family: inherit;
-      font-size: 13px;
-      transition: border-color 0.15s;
-    }
-    
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: #52525b;
-    }
-    
-    input::placeholder, textarea::placeholder {
-      color: #52525b;
-    }
-    
-    textarea { 
-      min-height: 140px; 
-      resize: vertical; 
-      line-height: 1.6;
-    }
-    
-    select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      padding-right: 32px;
-    }
-    
-    /* 表格 */
-    .table-wrapper {
-      overflow-x: auto;
-      border: 1px solid #27272a;
-      border-radius: 8px;
-    }
-    
-    table { 
-      width: 100%; 
-      border-collapse: collapse;
-    }
-    
-    th, td { 
-      padding: 10px 14px; 
-      text-align: left; 
-    }
-    
-    th { 
-      background: #16161a; 
-      color: #71717a; 
-      font-weight: 500;
-      font-size: 12px;
-      border-bottom: 1px solid #27272a;
-    }
-    
-    td {
-      border-bottom: 1px solid #27272a;
-      font-size: 13px;
-      color: #d4d4d8;
-    }
-    
-    tr:hover td { 
-      background: #1c1c1f; 
-    }
-    
-    tr:last-child td {
-      border-bottom: none;
-    }
-    
-    /* 弹窗 */
-    .modal { 
-      display: none; 
-      position: fixed; 
-      top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0, 0, 0, 0.6); 
-      z-index: 1000; 
-      justify-content: center; 
-      align-items: center;
-    }
-    
-    .modal.active { display: flex; }
-    
-    .modal-content { 
-      background: #18181b; 
-      border: 1px solid #27272a;
-      border-radius: 10px; 
-      padding: 24px; 
-      width: 480px; 
-      max-width: 90%;
-    }
-    
-    .modal-content.modal-fullscreen {
-      width: 90vw;
-      height: 85vh;
-      max-width: 1200px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .modal-fullscreen .modal-header { flex-shrink: 0; }
-    
-    .modal-fullscreen .editor-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow: hidden;
-    }
-    
-    .modal-fullscreen .editor-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    
-    .modal-fullscreen .editor-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px;
-    }
-    
-    .modal-fullscreen textarea {
-      flex: 1;
-      min-height: 0;
-      resize: none;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    
-    .editor-toolbar {
-      display: flex;
-      gap: 4px;
-      padding: 6px 8px;
-      background: #16161a;
-      border: 1px solid #27272a;
-      border-radius: 6px;
-      flex-shrink: 0;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    
-    .editor-toolbar button {
-      padding: 5px 8px;
-      background: transparent;
-      border: none;
-      border-radius: 4px;
-      color: #71717a;
-      cursor: pointer;
-      font-size: 12px;
-      transition: background 0.1s, color 0.1s;
-    }
-    
-    .editor-toolbar button:hover {
-      background: #27272a;
-      color: #fafafa;
-    }
-    
-    .editor-toolbar .separator {
-      width: 1px;
-      height: 18px;
-      background: #27272a;
-      margin: 0 4px;
-    }
-    
-    .image-upload-zone {
-      border: 1px dashed #3f3f46;
-      border-radius: 6px;
-      padding: 14px;
-      text-align: center;
-      color: #52525b;
-      font-size: 12px;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-      flex-shrink: 0;
-    }
-    
-    .image-upload-zone:hover,
-    .image-upload-zone.dragover {
-      border-color: #71717a;
-      color: #a1a1aa;
-    }
-    
-    /* 全屏文章编辑器 */
-    .editor-page {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      z-index: 2000;
-      background: #111113;
-      flex-direction: column;
-    }
-    .editor-page.active { display: flex; }
-
-    .editor-topbar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 20px;
-      border-bottom: 1px solid #27272a;
-      flex-shrink: 0;
-    }
-    .editor-title-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #fafafa;
-      font-size: 16px;
-      font-weight: 500;
-      padding: 4px 0;
-    }
-    .editor-title-input::placeholder { color: #3f3f46; }
-    .editor-topbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
-
-    .editor-meta {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      padding: 14px 20px;
-      flex-shrink: 0;
-      border-bottom: 1px solid #27272a;
-    }
-    .editor-meta-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .editor-meta-field label {
-      font-size: 11px;
-      font-weight: 500;
-      color: #71717a;
-    }
-    .editor-meta input, .editor-meta select {
-      padding: 8px 10px;
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 5px;
-      color: #e4e4e7;
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.15s;
-      width: 100%;
-    }
-    .editor-meta input:focus, .editor-meta select:focus {
-      border-color: #52525b;
-    }
-    .editor-meta input::placeholder { color: #52525b; }
-    .editor-meta select option { background: #18181b; color: #e4e4e7; }
-
-    .editor-page .editor-toolbar {
-      margin: 0 20px;
-      flex-shrink: 0;
-    }
-
-    .editor-content-area {
-      flex: 1;
-      display: flex;
-      padding: 12px 20px;
-      min-height: 0;
-    }
-    .editor-content-area textarea {
-      flex: 1;
-      width: 100%;
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 6px;
-      padding: 14px;
-      color: #e4e4e7;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 13px;
-      line-height: 1.7;
-      resize: none;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .editor-content-area textarea:focus {
-      border-color: #52525b;
-    }
-
-    .editor-bottombar {
-      padding: 10px 20px;
-      flex-shrink: 0;
-    }
-    .editor-bottombar .image-upload-zone { margin: 0; }
-    
-    .image-upload-zone input { display: none; }
-    
-    .modal-header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid #27272a;
-    }
-    
-    .modal-title {
-      font-size: 15px;
-      font-weight: 500;
-      color: #fafafa;
-    }
-    
-    .modal-close { 
-      background: none; 
-      border: none; 
-      color: #71717a; 
-      font-size: 20px; 
-      cursor: pointer;
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 5px;
-      transition: background 0.15s, color 0.15s;
-    }
-    
-    .modal-close:hover { 
-      color: #fafafa; 
-      background: #27272a;
-    }
-    
-    .section { display: none; }
-    .section.active { display: block; }
-    
-    .actions { 
-      display: flex; 
-      gap: 6px; 
-    }
-    
-    /* 标签 */
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 8px;
-      background: #27272a;
-      color: #a1a1aa;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-    
-    .tag-gray {
-      background: #27272a;
-      color: #71717a;
-    }
-    
-    /* 设置页面 */
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-    
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px;
-      background: #18181b;
-      border-radius: 8px;
-      border: 1px solid #27272a;
-    }
-    
-    .setting-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: #e4e4e7;
-      margin-bottom: 2px;
-    }
-    
-    .setting-desc {
-      font-size: 11px;
-      color: #71717a;
-    }
-    
-    /* 开关 */
-    .toggle {
-      position: relative;
-      width: 40px;
-      height: 22px;
-      background: #27272a;
-      border-radius: 11px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    .toggle.active {
-      background: #3f3f46;
-    }
-    
-    .toggle::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 16px;
-      height: 16px;
-      background: #71717a;
-      border-radius: 50%;
-      transition: all 0.2s;
-    }
-    
-    .toggle.active::after {
-      left: 21px;
-      background: #fafafa;
-    }
-    
-    /* 颜色选择器 */
-    .color-options {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    
-    .color-option {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color 0.15s;
-    }
-    
-    .color-option:hover {
-      border-color: #52525b;
-    }
-    
-    .color-option.active {
-      border-color: #fafafa;
-    }
-    
-    /* 滚动条 */
-    ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #27272a;
-      border-radius: 3px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #3f3f46;
-    }
-    
-    ::selection {
-      background: rgba(161, 161, 170, 0.3);
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 48px 20px;
-      color: #52525b;
-    }
-    
-    .empty-icon {
-      width: 48px;
-      height: 48px;
-      margin: 0 auto 12px;
-      opacity: 0.3;
-    }
-    
-    .empty-text {
-      font-size: 13px;
-    }
-    
-    @media (max-width: 1024px) {
-      .sidebar {
-        width: 56px;
-        padding: 16px 8px;
-      }
-      
-      .logo span,
-      .nav-section-title,
-      .nav-item span,
-      .sidebar-footer .nav-item span {
-        display: none;
-      }
-      
-      .nav-item {
-        justify-content: center;
-        padding: 10px;
-      }
-      
-      .nav-icon { margin: 0; }
-      
-      .main {
-        margin-left: 56px;
-      }
-      
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      
-      .settings-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    #crop-container { user-select: none; }
-    #crop-canvas { display: block; max-width: 100%; }
-    #crop-zoom { accent-color: #71717a; cursor: pointer; }
-
-    .color-input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .color-input-group label {
-      font-size: 11px;
-      color: #71717a;
-    }
-    .color-input-group input[type="color"] {
-      width: 28px;
-      height: 24px;
-      padding: 0;
-      border: 1px solid #27272a;
-      border-radius: 4px;
-      cursor: pointer;
-      background: transparent;
-    }
-    .color-input-group input[type="text"] {
-      width: 100%;
-      font-size: 11px;
-    }
-    .toggle-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      background: transparent;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
-      color: #a1a1aa;
-      transition: background 0.15s;
-    }
-    .toggle-label:hover {
-      background: #27272a;
-    }
-    .toggle-label input[type="checkbox"] {
-      width: 14px;
-      height: 14px;
-      accent-color: #71717a;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
+  <div class="login-panel" id="login-panel">
+    <form id="login-form">
+      <h2>管理员登录</h2>
+      <label>用户名<input name="username" autocomplete="username" required></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+      <p id="login-error" role="alert"></p>
+      <button class="btn btn-primary" type="submit">登录</button>
+    </form>
+  </div>
+  <button class="btn" id="logout-button" style="position:fixed;bottom:12px;left:12px;z-index:5000">退出登录</button>
   <div class="container">
     <div class="sidebar">
       <div class="logo">
@@ -823,7 +26,7 @@
       
       <div class="nav-section">
         <div class="nav-section-title">内容管理</div>
-        <div class="nav-item active" onclick="showSection('articles')">
+        <div class="nav-item active" data-admin-click="0">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -833,20 +36,20 @@
           </svg>
           <span>文章管理</span>
         </div>
-        <div class="nav-item" onclick="showSection('categories')">
+        <div class="nav-item" data-admin-click="1">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
           <span>分类管理</span>
         </div>
-        <div class="nav-item" onclick="showSection('tags')">
+        <div class="nav-item" data-admin-click="2">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
             <line x1="7" y1="7" x2="7.01" y2="7"></line>
           </svg>
           <span>标签管理</span>
         </div>
-        <div class="nav-item" onclick="showSection('comments')">
+        <div class="nav-item" data-admin-click="3">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
@@ -856,7 +59,7 @@
       
       <div class="nav-section">
         <div class="nav-section-title">系统</div>
-        <div class="nav-item" onclick="showSection('settings')">
+        <div class="nav-item" data-admin-click="4">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -866,7 +69,7 @@
       </div>
       
       <div class="sidebar-footer">
-        <div class="nav-item" onclick="window.location.href='/'">
+        <div class="nav-item" data-admin-click="5">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
@@ -925,7 +128,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">文章列表</div>
-            <button class="btn btn-primary" onclick="showArticleEditor()">
+            <button class="btn btn-primary" data-admin-click="6">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -963,7 +166,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">分类列表</div>
-            <button class="btn btn-primary" onclick="showCategoryModal()">
+            <button class="btn btn-primary" data-admin-click="7">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -999,7 +202,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">标签列表</div>
-            <button class="btn btn-primary" onclick="showTagModal()">
+            <button class="btn btn-primary" data-admin-click="8">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -1030,6 +233,7 @@
         </div>
       </div>
 
+      <div id="article-pagination" class="card"></div>
       <!-- 评论管理 -->
       <div id="comments" class="section">
         <div class="card">
@@ -1050,7 +254,7 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">前端设置</div>
-            <button class="btn btn-primary" onclick="saveSettings()">
+            <button class="btn btn-primary" data-admin-click="9">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                 <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -1085,7 +289,7 @@
                 <div class="setting-label">显示网格背景</div>
                 <div class="setting-desc">页面背景的网格装饰效果</div>
               </div>
-              <div class="toggle active" id="toggle-grid" onclick="toggleSetting('grid')"></div>
+              <div class="toggle active" id="toggle-grid" data-admin-click="10"></div>
             </div>
             
             <div class="setting-item">
@@ -1093,7 +297,7 @@
                 <div class="setting-label">显示页脚</div>
                 <div class="setting-desc">页面底部的版权信息</div>
               </div>
-              <div class="toggle active" id="toggle-footer" onclick="toggleSetting('footer')"></div>
+              <div class="toggle active" id="toggle-footer" data-admin-click="11"></div>
             </div>
             
             <div class="setting-item">
@@ -1128,11 +332,11 @@
                 <div class="setting-desc">按钮、链接等元素的颜色</div>
               </div>
               <div class="color-options">
-                <div class="color-option active" style="background: #ffd700;" data-color="gold" onclick="setColor('gold')"></div>
-                <div class="color-option" style="background: #8b5cf6;" data-color="purple" onclick="setColor('purple')"></div>
-                <div class="color-option" style="background: #06b6d4;" data-color="cyan" onclick="setColor('cyan')"></div>
-                <div class="color-option" style="background: #10b981;" data-color="green" onclick="setColor('green')"></div>
-                <div class="color-option" style="background: #f43f5e;" data-color="rose" onclick="setColor('rose')"></div>
+                <div class="color-option active" style="background: #ffd700;" data-color="gold" data-admin-click="12"></div>
+                <div class="color-option" style="background: #8b5cf6;" data-color="purple" data-admin-click="13"></div>
+                <div class="color-option" style="background: #06b6d4;" data-color="cyan" data-admin-click="14"></div>
+                <div class="color-option" style="background: #10b981;" data-color="green" data-admin-click="15"></div>
+                <div class="color-option" style="background: #f43f5e;" data-color="rose" data-admin-click="16"></div>
               </div>
             </div>
             
@@ -1172,7 +376,7 @@
               <div style="display: flex; align-items: center; gap: 12px;">
                 <img id="avatar-preview" src="" alt="头像预览" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid rgba(255,215,0,0.3);">
                 <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
-                <button onclick="document.getElementById('avatar-upload').click()" class="btn" style="padding: 8px 16px; margin: 0;">选择图片</button>
+                <button data-admin-click="17" class="btn" style="padding: 8px 16px; margin: 0;">选择图片</button>
                 <span id="avatar-status" style="font-size: 13px; color: #888;"></span>
               </div>
             </div>
@@ -1208,9 +412,9 @@
           <div class="card-header">
             <div class="card-title">主题配置</div>
             <div style="display: flex; gap: 8px;">
-              <button onclick="importTheme()" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导入主题</button>
-              <button onclick="exportTheme()" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导出主题</button>
-              <input type="file" id="theme-file-input" accept=".json" style="display: none;" onchange="handleThemeFileImport(event)">
+              <button data-admin-click="18" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导入主题</button>
+              <button data-admin-click="19" class="btn" style="padding: 6px 12px; margin: 0; font-size: 12px;">导出主题</button>
+              <input type="file" id="theme-file-input" accept=".json" style="display: none;" data-admin-change="20">
             </div>
           </div>
 
@@ -1231,15 +435,15 @@
             <div style="margin-bottom: 20px;">
               <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">预设主题</div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button onclick="applyPreset('cyberpunk')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                <button data-admin-click="21" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
                   <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #6366f1, #8b5cf6); margin-right: 6px; vertical-align: middle;"></span>
                   暗金赛博朋克
                 </button>
-                <button onclick="applyPreset('minimal')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                <button data-admin-click="22" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
                   <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #000, #6c757d); margin-right: 6px; vertical-align: middle;"></span>
                   极简白
                 </button>
-                <button onclick="applyPreset('dark')" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
+                <button data-admin-click="23" class="btn" style="padding: 8px 16px; margin: 0; font-size: 12px;">
                   <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #60a5fa, #a78bfa); margin-right: 6px; vertical-align: middle;"></span>
                   暗色
                 </button>
@@ -1253,127 +457,127 @@
                 <div class="color-input-group">
                   <label>背景色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-background" value="#0a0a0f" onchange="updateThemeColor('background', this.value)">
-                    <input type="text" id="theme-color-background-hex" value="#0a0a0f" onchange="updateThemeColorFromHex('background', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-background" value="#0a0a0f" data-admin-change="24">
+                    <input type="text" id="theme-color-background-hex" value="#0a0a0f" data-admin-change="25" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>表面色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-surface" value="#141837" onchange="updateThemeColor('surface', this.value)">
-                    <input type="text" id="theme-color-surface-hex" value="#141837" onchange="updateThemeColorFromHex('surface', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-surface" value="#141837" data-admin-change="26">
+                    <input type="text" id="theme-color-surface-hex" value="#141837" data-admin-change="27" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>表面亮色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-surfaceLight" value="#202648" onchange="updateThemeColor('surfaceLight', this.value)">
-                    <input type="text" id="theme-color-surfaceLight-hex" value="#202648" onchange="updateThemeColorFromHex('surfaceLight', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-surfaceLight" value="#202648" data-admin-change="28">
+                    <input type="text" id="theme-color-surfaceLight-hex" value="#202648" data-admin-change="29" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>边框色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-border" value="#2a2a3a" onchange="updateThemeColor('border', this.value)">
-                    <input type="text" id="theme-color-border-hex" value="#2a2a3a" onchange="updateThemeColorFromHex('border', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-border" value="#2a2a3a" data-admin-change="30">
+                    <input type="text" id="theme-color-border-hex" value="#2a2a3a" data-admin-change="31" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>主色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-primary" value="#6366f1" onchange="updateThemeColor('primary', this.value)">
-                    <input type="text" id="theme-color-primary-hex" value="#6366f1" onchange="updateThemeColorFromHex('primary', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-primary" value="#6366f1" data-admin-change="32">
+                    <input type="text" id="theme-color-primary-hex" value="#6366f1" data-admin-change="33" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>主色亮</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-primaryLight" value="#818cf8" onchange="updateThemeColor('primaryLight', this.value)">
-                    <input type="text" id="theme-color-primaryLight-hex" value="#818cf8" onchange="updateThemeColorFromHex('primaryLight', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-primaryLight" value="#818cf8" data-admin-change="34">
+                    <input type="text" id="theme-color-primaryLight-hex" value="#818cf8" data-admin-change="35" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>主色暗</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-primaryDark" value="#4f46e5" onchange="updateThemeColor('primaryDark', this.value)">
-                    <input type="text" id="theme-color-primaryDark-hex" value="#4f46e5" onchange="updateThemeColorFromHex('primaryDark', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-primaryDark" value="#4f46e5" data-admin-change="36">
+                    <input type="text" id="theme-color-primaryDark-hex" value="#4f46e5" data-admin-change="37" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>辅助色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-secondary" value="#8b5cf6" onchange="updateThemeColor('secondary', this.value)">
-                    <input type="text" id="theme-color-secondary-hex" value="#8b5cf6" onchange="updateThemeColorFromHex('secondary', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-secondary" value="#8b5cf6" data-admin-change="38">
+                    <input type="text" id="theme-color-secondary-hex" value="#8b5cf6" data-admin-change="39" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>辅助亮色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-secondaryLight" value="#a78bfa" onchange="updateThemeColor('secondaryLight', this.value)">
-                    <input type="text" id="theme-color-secondaryLight-hex" value="#a78bfa" onchange="updateThemeColorFromHex('secondaryLight', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-secondaryLight" value="#a78bfa" data-admin-change="40">
+                    <input type="text" id="theme-color-secondaryLight-hex" value="#a78bfa" data-admin-change="41" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>强调色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-accent" value="#C4612F" onchange="updateThemeColor('accent', this.value)">
-                    <input type="text" id="theme-color-accent-hex" value="#C4612F" onchange="updateThemeColorFromHex('accent', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-accent" value="#C4612F" data-admin-change="42">
+                    <input type="text" id="theme-color-accent-hex" value="#C4612F" data-admin-change="43" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>强调亮色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-accentLight" value="#A94E22" onchange="updateThemeColor('accentLight', this.value)">
-                    <input type="text" id="theme-color-accentLight-hex" value="#A94E22" onchange="updateThemeColorFromHex('accentLight', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-accentLight" value="#A94E22" data-admin-change="44">
+                    <input type="text" id="theme-color-accentLight-hex" value="#A94E22" data-admin-change="45" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>文字主色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-textPrimary" value="#ffffff" onchange="updateThemeColor('textPrimary', this.value)">
-                    <input type="text" id="theme-color-textPrimary-hex" value="#ffffff" onchange="updateThemeColorFromHex('textPrimary', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-textPrimary" value="#ffffff" data-admin-change="46">
+                    <input type="text" id="theme-color-textPrimary-hex" value="#ffffff" data-admin-change="47" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>文字副色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-textSecondary" value="#a0aec0" onchange="updateThemeColor('textSecondary', this.value)">
-                    <input type="text" id="theme-color-textSecondary-hex" value="#a0aec0" onchange="updateThemeColorFromHex('textSecondary', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-textSecondary" value="#a0aec0" data-admin-change="48">
+                    <input type="text" id="theme-color-textSecondary-hex" value="#a0aec0" data-admin-change="49" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>文字弱色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-textMuted" value="#5C635D" onchange="updateThemeColor('textMuted', this.value)">
-                    <input type="text" id="theme-color-textMuted-hex" value="#5C635D" onchange="updateThemeColorFromHex('textMuted', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-textMuted" value="#5C635D" data-admin-change="50">
+                    <input type="text" id="theme-color-textMuted-hex" value="#5C635D" data-admin-change="51" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>成功色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-success" value="#10b981" onchange="updateThemeColor('success', this.value)">
-                    <input type="text" id="theme-color-success-hex" value="#10b981" onchange="updateThemeColorFromHex('success', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-success" value="#10b981" data-admin-change="52">
+                    <input type="text" id="theme-color-success-hex" value="#10b981" data-admin-change="53" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>警告色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-warning" value="#f59e0b" onchange="updateThemeColor('warning', this.value)">
-                    <input type="text" id="theme-color-warning-hex" value="#f59e0b" onchange="updateThemeColorFromHex('warning', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-warning" value="#f59e0b" data-admin-change="54">
+                    <input type="text" id="theme-color-warning-hex" value="#f59e0b" data-admin-change="55" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>错误色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-error" value="#ef4444" onchange="updateThemeColor('error', this.value)">
-                    <input type="text" id="theme-color-error-hex" value="#ef4444" onchange="updateThemeColorFromHex('error', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-error" value="#ef4444" data-admin-change="56">
+                    <input type="text" id="theme-color-error-hex" value="#ef4444" data-admin-change="57" style="flex: 1;">
                   </div>
                 </div>
                 <div class="color-input-group">
                   <label>信息色</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="color" id="theme-color-info" value="#3b82f6" onchange="updateThemeColor('info', this.value)">
-                    <input type="text" id="theme-color-info-hex" value="#3b82f6" onchange="updateThemeColorFromHex('info', this.value)" style="flex: 1;">
+                    <input type="color" id="theme-color-info" value="#3b82f6" data-admin-change="58">
+                    <input type="text" id="theme-color-info-hex" value="#3b82f6" data-admin-change="59" style="flex: 1;">
                   </div>
                 </div>
               </div>
@@ -1403,27 +607,27 @@
               <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">特效开关</div>
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-pixelSnow" checked onchange="updateThemeEffect('pixelSnow', this.checked)">
+                  <input type="checkbox" id="theme-effect-pixelSnow" checked data-admin-change="60">
                   <span>粒子雪花</span>
                 </label>
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-sideRays" checked onchange="updateThemeEffect('sideRays', this.checked)">
+                  <input type="checkbox" id="theme-effect-sideRays" checked data-admin-change="61">
                   <span>侧边光线</span>
                 </label>
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-splashCursor" checked onchange="updateThemeEffect('splashCursor', this.checked)">
+                  <input type="checkbox" id="theme-effect-splashCursor" checked data-admin-change="62">
                   <span>鼠标水流</span>
                 </label>
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-gridOverlay" checked onchange="updateThemeEffect('gridOverlay', this.checked)">
+                  <input type="checkbox" id="theme-effect-gridOverlay" checked data-admin-change="63">
                   <span>网格覆盖</span>
                 </label>
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-glassEffect" checked onchange="updateThemeEffect('glassEffect', this.checked)">
+                  <input type="checkbox" id="theme-effect-glassEffect" checked data-admin-change="64">
                   <span>玻璃态</span>
                 </label>
                 <label class="toggle-label">
-                  <input type="checkbox" id="theme-effect-animations" checked onchange="updateThemeEffect('animations', this.checked)">
+                  <input type="checkbox" id="theme-effect-animations" checked data-admin-change="65">
                   <span>动画效果</span>
                 </label>
               </div>
@@ -1439,19 +643,19 @@
                   <!-- 图片地址 -->
                   <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片地址</label>
-                    <input type="text" id="theme-bg-image" placeholder="https://example.com/bg.jpg" style="width: 100%;" onchange="updateThemeBg()">
+                    <input type="text" id="theme-bg-image" placeholder="https://example.com/bg.jpg" style="width: 100%;" data-admin-change="66">
                   </div>
 
                   <!-- 上传按钮 -->
                   <div style="margin-bottom: 12px;">
-                    <button onclick="document.getElementById('theme-bg-file').click()" class="btn" style="width: 100%; margin: 0;">上传图片</button>
-                    <input type="file" id="theme-bg-file" accept="image/*" style="display: none;" onchange="handleBgImageUpload(event)">
+                    <button data-admin-click="67" class="btn" style="width: 100%; margin: 0;">上传图片</button>
+                    <input type="file" id="theme-bg-file" accept="image/*" style="display: none;" data-admin-change="68">
                   </div>
 
                   <!-- 图片大小 -->
                   <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片大小</label>
-                    <select id="theme-bg-size" style="width: 100%;" onchange="updateThemeBg()">
+                    <select id="theme-bg-size" style="width: 100%;" data-admin-change="69">
                       <option value="cover">cover（覆盖）</option>
                       <option value="contain">contain（包含）</option>
                       <option value="auto">auto（自动）</option>
@@ -1462,7 +666,7 @@
                   <!-- 图片位置 -->
                   <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">图片位置</label>
-                    <select id="theme-bg-position" style="width: 100%;" onchange="updateThemeBg()">
+                    <select id="theme-bg-position" style="width: 100%;" data-admin-change="70">
                       <option value="center">居中</option>
                       <option value="top">顶部</option>
                       <option value="bottom">底部</option>
@@ -1478,7 +682,7 @@
                   <!-- 遮罩透明度 -->
                   <div>
                     <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">遮罩透明度 <span id="theme-bg-overlay-val" style="color: #ffd700;">0.7</span></label>
-                    <input type="range" id="theme-bg-overlay" min="0" max="1" step="0.05" value="0.7" style="width: 100%; accent-color: #ffd700;" onchange="document.getElementById('theme-bg-overlay-val').textContent = this.value; updateThemeBg();">
+                    <input type="range" id="theme-bg-overlay" min="0" max="1" step="0.05" value="0.7" style="width: 100%; accent-color: #ffd700;" data-admin-change="71">
                   </div>
                 </div>
 
@@ -1550,13 +754,13 @@
   <!-- 文章编辑器 - 全屏页面 -->
   <div id="article-editor" class="editor-page">
     <div class="editor-topbar">
-      <button class="btn btn-secondary" onclick="closeArticleEditor()">
+      <button class="btn btn-secondary" data-admin-click="72">
         <span style="font-size: 18px;">&larr;</span> 返回
       </button>
       <input id="article-title" class="editor-title-input" placeholder="文章标题">
       <div class="editor-topbar-actions">
-        <button class="btn btn-secondary" onclick="saveArticle('draft')">暂存</button>
-        <button class="btn btn-primary" onclick="saveArticle('published')">发布文章</button>
+        <button class="btn btn-secondary" data-admin-click="73">暂存</button>
+        <button class="btn btn-primary" data-admin-click="74">发布文章</button>
       </div>
     </div>
     <div class="editor-meta">
@@ -1585,22 +789,22 @@
       </div>
     </div>
     <div class="editor-toolbar">
-      <button onclick="insertMd('**', '**')" title="粗体">粗体</button>
-      <button onclick="insertMd('*', '*')" title="斜体">斜体</button>
-      <button onclick="insertMd('~~', '~~')" title="删除线">删除线</button>
-      <button onclick="insertMd('`', '`')" title="行内代码">代码</button>
+      <button data-admin-click="75" title="粗体">粗体</button>
+      <button data-admin-click="76" title="斜体">斜体</button>
+      <button data-admin-click="77" title="删除线">删除线</button>
+      <button data-admin-click="78" title="行内代码">代码</button>
       <div class="separator"></div>
-      <button onclick="insertLine('# ')" title="一级标题">H1</button>
-      <button onclick="insertLine('## ')" title="二级标题">H2</button>
-      <button onclick="insertLine('### ')" title="三级标题">H3</button>
+      <button data-admin-click="79" title="一级标题">H1</button>
+      <button data-admin-click="80" title="二级标题">H2</button>
+      <button data-admin-click="81" title="三级标题">H3</button>
       <div class="separator"></div>
-      <button onclick="insertLine('- ')" title="无序列表">列表</button>
-      <button onclick="insertLine('1. ')" title="有序列表">序号</button>
-      <button onclick="insertLine('> ')" title="引用">引用</button>
-      <button onclick="insertLine('---')" title="分割线">分割线</button>
+      <button data-admin-click="82" title="无序列表">列表</button>
+      <button data-admin-click="83" title="有序列表">序号</button>
+      <button data-admin-click="84" title="引用">引用</button>
+      <button data-admin-click="85" title="分割线">分割线</button>
       <div class="separator"></div>
-      <button onclick="insertMd('[', '](url)')" title="链接">链接</button>
-      <button onclick="insertImage()" title="插入图片">图片</button>
+      <button data-admin-click="86" title="链接">链接</button>
+      <button data-admin-click="87" title="插入图片">图片</button>
     </div>
     <div class="editor-content-area">
       <textarea id="article-content" placeholder="文章内容（支持 Markdown 语法，可直接粘贴图片）"></textarea>
@@ -1618,14 +822,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="category-modal-title" class="modal-title">新建分类</h3>
-        <button class="modal-close" onclick="closeModal('category-modal')">&times;</button>
+        <button class="modal-close" data-admin-click="88">&times;</button>
       </div>
       <input id="category-name" placeholder="分类名称">
       <input id="category-slug" placeholder="URL别名（可选，自动生成）">
       <textarea id="category-description" placeholder="分类描述" style="min-height: 100px;"></textarea>
       <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
-        <button class="btn btn-secondary" onclick="closeModal('category-modal')">取消</button>
-        <button class="btn btn-primary" onclick="saveCategory()">保存分类</button>
+        <button class="btn btn-secondary" data-admin-click="89">取消</button>
+        <button class="btn btn-primary" data-admin-click="90">保存分类</button>
       </div>
     </div>
   </div>
@@ -1635,14 +839,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="tag-modal-title" class="modal-title">新建标签</h3>
-        <button class="modal-close" onclick="closeModal('tag-modal')">&times;</button>
+        <button class="modal-close" data-admin-click="91">&times;</button>
       </div>
       <input id="tag-name" placeholder="标签名称">
       <input id="tag-slug" placeholder="URL别名（可选，自动生成）">
       <textarea id="tag-description" placeholder="标签描述" style="min-height: 100px;"></textarea>
       <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
-        <button class="btn btn-secondary" onclick="closeModal('tag-modal')">取消</button>
-        <button class="btn btn-primary" onclick="saveTag()">保存标签</button>
+        <button class="btn btn-secondary" data-admin-click="92">取消</button>
+        <button class="btn btn-primary" data-admin-click="93">保存标签</button>
       </div>
     </div>
   </div>
@@ -1652,7 +856,7 @@
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
         <h3 class="modal-title">裁剪头像</h3>
-        <button class="modal-close" onclick="closeCropModal()">&times;</button>
+        <button class="modal-close" data-admin-click="94">&times;</button>
       </div>
       <div style="padding: 20px; text-align: center;">
         <div id="crop-container" style="position:relative; display:inline-block; overflow:hidden; border: 2px solid rgba(255,215,0,0.3); border-radius: 8px; cursor:crosshair; max-width: 440px; max-height: 440px;">
@@ -1679,1355 +883,23 @@
         </div>
       </div>
       <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 0 20px 20px;">
-        <button class="btn btn-secondary" onclick="closeCropModal()">取消</button>
-        <button class="btn btn-primary" onclick="confirmCrop()">确认裁剪</button>
+        <button class="btn btn-secondary" data-admin-click="95">取消</button>
+        <button class="btn btn-primary" data-admin-click="96">确认裁剪</button>
       </div>
     </div>
   </div>
 
-  <script>
-    let currentEditId = null;
-    let articles = [];
-    let categories = [];
-    let tags = [];
-    
-    // 设置数据
-    let settings = {
-      title: 'TechBlog',
-      description: '探索技术世界，分享编程经验',
-      grid: true,
-      footer: true,
-      excerpt: 100,
-      perpage: 10,
-      color: 'gold',
-      sidebar: 'right',
-      author: 'Tech Blogger',
-      avatar: '',
-      bio: '探索技术世界，分享编程经验',
-      github: '',
-      email: ''
-    };
-
-    // 初始化
-    document.addEventListener('DOMContentLoaded', () => {
-      loadSettings();
-      loadStats();
-      loadArticles();
-      bindAutoSave();
-
-      // 头像上传事件
-      document.getElementById('avatar-upload').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // 打开裁剪弹窗
-        openCropModal(file);
-
-        // 清空 input，允许重复选择同一文件
-        e.target.value = '';
-      });
-    });
-
-    // 获取认证头
-    function getAuthHeaders() {
-      const password = 'admin123';
-      const encoded = btoa('admin:' + password);
-      return {
-        'Authorization': 'Basic ' + encoded,
-        'Content-Type': 'application/json'
-      };
-    }
-
-    // 加载设置
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/settings', { headers: getAuthHeaders() });
-        const data = await res.json();
-        if (data.settings) {
-          settings = { ...settings, ...data.settings };
-          applySettings();
-
-          // 加载主题配置
-          if (data.settings.theme) {
-            loadThemeToUI(data.settings.theme);
-          }
-        }
-      } catch (e) {
-        console.log('使用默认设置');
-      }
-    }
-
-    // 应用设置到UI
-    function applySettings() {
-      document.getElementById('setting-title').value = settings.title;
-      document.getElementById('setting-description').value = settings.description;
-      document.getElementById('setting-excerpt').value = settings.excerpt;
-      document.getElementById('setting-perpage').value = settings.perpage;
-      document.getElementById('setting-sidebar').value = settings.sidebar;
-      document.getElementById('setting-author').value = settings.author;
-      document.getElementById('setting-bio').value = settings.bio;
-      document.getElementById('setting-github').value = settings.github;
-      document.getElementById('setting-email').value = settings.email;
-
-      // 显示头像预览
-      const avatarPreview = document.getElementById('avatar-preview');
-      if (settings.avatar) {
-        avatarPreview.src = settings.avatar;
-        avatarPreview.style.display = 'block';
-      } else {
-        avatarPreview.style.display = 'none';
-      }
-
-      // 开关状态
-      document.getElementById('toggle-grid').classList.toggle('active', settings.grid);
-      document.getElementById('toggle-footer').classList.toggle('active', settings.footer);
-      
-      // 颜色选择
-      document.querySelectorAll('.color-option').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.color === settings.color);
-      });
-    }
-
-    // 切换开关
-    function toggleSetting(key) {
-      const toggle = document.getElementById(`toggle-${key}`);
-      toggle.classList.toggle('active');
-      settings[key] = toggle.classList.contains('active');
-    }
-
-    // 设置颜色
-    function setColor(color) {
-      settings.color = color;
-      document.querySelectorAll('.color-option').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.color === color);
-      });
-    }
-
-    // 保存设置
-    async function saveSettings() {
-      settings.title = document.getElementById('setting-title').value;
-      settings.description = document.getElementById('setting-description').value;
-      settings.excerpt = parseInt(document.getElementById('setting-excerpt').value);
-      settings.perpage = parseInt(document.getElementById('setting-perpage').value);
-      settings.sidebar = document.getElementById('setting-sidebar').value;
-      settings.author = document.getElementById('setting-author').value;
-      // settings.avatar 在上传时已经设置，不需要从输入框读取
-      settings.bio = document.getElementById('setting-bio').value;
-      settings.github = document.getElementById('setting-github').value;
-      settings.email = document.getElementById('setting-email').value;
-
-      // 保存主题配置
-      settings.theme = readThemeFromUI();
-      
-      try {
-        await fetch('/api/settings', {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(settings)
-        });
-        showSaveStatus('已保存');
-      } catch (e) {
-        showSaveStatus('保存失败', true);
-      }
-    }
-
-    // 显示保存状态
-    function showSaveStatus(msg, isError = false) {
-      const statusEl = document.getElementById('save-status');
-      if (statusEl) {
-        statusEl.textContent = msg;
-        statusEl.style.color = isError ? '#ef4444' : '#10b981';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
-      }
-    }
-
-    // 自动保存（防抖）
-    let autoSaveTimer = null;
-    function autoSave() {
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        saveSettings();
-      }, 500);
-    }
-
-    // 为所有设置输入框绑定自动保存事件
-    function bindAutoSave() {
-      const inputs = [
-        'setting-title', 'setting-description', 'setting-excerpt', 'setting-perpage',
-        'setting-sidebar', 'setting-author', 'setting-bio', 'setting-github', 'setting-email'
-      ];
-      inputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.addEventListener('input', autoSave);
-          el.addEventListener('change', autoSave);
-        }
-      });
-
-      // 开关类设置
-      ['toggle-grid', 'toggle-footer'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('click', autoSave);
-      });
-
-      // 颜色选择
-      document.querySelectorAll('.color-option').forEach(opt => {
-        opt.addEventListener('click', autoSave);
-      });
-
-      // 主题配置：字体和圆角输入框
-      const themeInputs = [
-        'theme-name', 'theme-font-heading', 'theme-font-body', 'theme-font-code',
-        'theme-radius-sm', 'theme-radius-md', 'theme-radius-lg', 'theme-radius-xl'
-      ];
-      themeInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.addEventListener('input', autoSave);
-          el.addEventListener('change', autoSave);
-        }
-      });
-    }
-
-    // 加载统计数据
-    async function loadStats() {
-      try {
-        const headers = getAuthHeaders();
-        const [articlesRes, categoriesRes, tagsRes, viewsRes] = await Promise.all([
-          fetch('/api/articles', { headers }),
-          fetch('/api/categories', { headers }),
-          fetch('/api/tags', { headers }),
-          fetch('/api/stats/views', { headers })
-        ]);
-        
-        const articlesData = await articlesRes.json();
-        const categoriesData = await categoriesRes.json();
-        const tagsData = await tagsRes.json();
-        const viewsData = await viewsRes.json();
-        
-        const articlesList = Array.isArray(articlesData) ? articlesData : (articlesData.articles || []);
-        const categoriesList = Array.isArray(categoriesData) ? categoriesData : (categoriesData.categories || []);
-        const tagsList = Array.isArray(tagsData) ? tagsData : (tagsData.tags || []);
-        document.getElementById('stat-articles').textContent = articlesList.length;
-        document.getElementById('stat-categories').textContent = categoriesList.length;
-        document.getElementById('stat-tags').textContent = tagsList.length;
-        document.getElementById('stat-views').textContent = viewsData.views || 0;
-      } catch (e) {
-        console.log('统计数据加载失败');
-      }
-    }
-
-    // 导航切换
-    function showSection(sectionId) {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById(sectionId).classList.add('active');
-      event.currentTarget.classList.add('active');
-      
-      if (sectionId === 'articles') loadArticles();
-      if (sectionId === 'categories') loadCategories();
-      if (sectionId === 'tags') loadTags();
-    }
-
-    // Markdown 辅助工具
-    function insertMd(before, after) {
-      const ta = document.getElementById('article-content');
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const selected = ta.value.substring(start, end);
-      const replacement = before + (selected || '文本') + after;
-      ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
-      ta.focus();
-      ta.selectionStart = start + before.length;
-      ta.selectionEnd = start + before.length + (selected || '文本').length;
-    }
-
-    function insertLine(prefix) {
-      const ta = document.getElementById('article-content');
-      const start = ta.selectionStart;
-      const lineStart = ta.value.lastIndexOf('\n', start - 1) + 1;
-      ta.value = ta.value.substring(0, lineStart) + prefix + ta.value.substring(lineStart);
-      ta.focus();
-      ta.selectionStart = ta.selectionEnd = lineStart + prefix.length;
-    }
-
-    function insertImage() {
-      document.getElementById('image-file-input').click();
-    }
-
-    async function uploadImage(file, insertMarkdown = true, imageType = 'normal') {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      // 直接发送到后端服务器（绕过代理，因为需要 multipart/form-data）
-      try {
-        const res = await fetch(`/api/upload?type=${imageType}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': getAuthHeaders().Authorization
-          },
-          body: formData
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || '上传失败');
-        }
-
-        const data = await res.json();
-        if (data.url) {
-          // 仅在需要时插入 Markdown 到编辑器（头像和背景上传不需要）
-          if (insertMarkdown) {
-            const ta = document.getElementById('article-content');
-            if (ta) {
-              const pos = ta.selectionStart;
-              const md = `![${file.name}](${data.url})`;
-              ta.value = ta.value.substring(0, pos) + md + ta.value.substring(pos);
-              ta.selectionStart = ta.selectionEnd = pos + md.length;
-              ta.focus();
-            }
-          }
-          return data.url;
-        }
-        throw new Error('上传响应格式错误');
-      } catch (e) {
-        console.error('上传失败:', e);
-        throw e;
-      }
-    }
-
-    // 图片粘贴和拖拽上传绑定
-    let pasteBound = false;
-    function bindUploadHandlers() {
-      if (pasteBound) return;
-      pasteBound = true;
-
-      const ta = document.getElementById('article-content');
-      if (ta) {
-        ta.addEventListener('paste', async (e) => {
-          const items = e.clipboardData?.items;
-          if (!items) return;
-          for (const item of items) {
-            if (item.type.startsWith('image/')) {
-              e.preventDefault();
-              const file = item.getAsFile();
-              if (file) {
-                await uploadImage(file);
-              }
-              return;
-            }
-          }
-        });
-      }
-
-      const dropZone = document.getElementById('image-drop-zone');
-      const fileInput = document.getElementById('image-file-input');
-      if (dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-          dropZone.classList.remove('dragover');
-        });
-        dropZone.addEventListener('drop', async (e) => {
-          e.preventDefault();
-          dropZone.classList.remove('dragover');
-          const files = e.dataTransfer.files;
-          for (const file of files) {
-            if (file.type.startsWith('image/')) {
-              await uploadImage(file);
-            }
-          }
-        });
-        fileInput.addEventListener('change', async (e) => {
-          const files = e.target.files;
-          for (const file of files) {
-            if (file.type.startsWith('image/')) {
-              await uploadImage(file);
-            }
-          }
-          fileInput.value = '';
-        });
-      }
-    }
-
-    // 弹窗控制
-    function showModal(modalId) {
-      document.getElementById(modalId).classList.add('active');
-    }
-
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.remove('active');
-      currentEditId = null;
-    }
-
-    // 文章管理
-    async function loadArticles() {
-      const res = await fetch('/api/articles', { headers: getAuthHeaders() });
-      const data = await res.json();
-      articles = data.articles || data || [];
-      renderArticles();
-      loadCategoriesForSelect();
-    }
-
-    function renderArticles() {
-      const tbody = document.getElementById('articles-table');
-      const emptyState = document.getElementById('articles-empty');
-      
-      if (articles.length === 0) {
-        tbody.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-      }
-      
-      emptyState.style.display = 'none';
-      tbody.innerHTML = articles.map(article => {
-        const statusTag = article.status === 'published' 
-          ? '<span class="tag" style="background: #10b981; color: white;">已发布</span>'
-          : '<span class="tag tag-gray">草稿</span>';
-        return `
-        <tr>
-          <td><strong>${article.title}</strong></td>
-          <td>${statusTag}</td>
-          <td><span class="tag">${article.category || '未分类'}</span></td>
-          <td>${(article.tags || []).map(t => `<span class="tag tag-gray">${t}</span>`).join(' ')}</td>
-          <td style="color: #64748b;">${article.publishDate || '-'}</td>
-          <td class="actions">
-            <button class="btn btn-sm btn-secondary" onclick="editArticle('${article.id}')">编辑</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteArticle('${article.id}')">删除</button>
-          </td>
-        </tr>
-        `;
-      }).join('');
-    }
-
-    async function showArticleEditor(id = null) {
-      currentEditId = id;
-      if (id) {
-        try {
-          const res = await fetch(`/api/articles/by-id/${id}`, { headers: getAuthHeaders() });
-          if (res.ok) {
-            const article = await res.json();
-            document.getElementById('article-title').value = article.title || '';
-            document.getElementById('article-slug').value = article.slug || '';
-            document.getElementById('article-tags').value = (article.tags || []).join(', ');
-            document.getElementById('article-content').value = article.content || '';
-            document.getElementById('article-author').value = article.author || '';
-            document.getElementById('article-status').value = article.status || 'published';
-          }
-        } catch (e) {
-          console.error('获取文章详情失败:', e);
-        }
-      } else {
-        document.getElementById('article-title').value = '';
-        document.getElementById('article-slug').value = '';
-        document.getElementById('article-tags').value = '';
-        document.getElementById('article-content').value = '';
-        document.getElementById('article-author').value = settings.author || '';
-        document.getElementById('article-status').value = 'draft';
-      }
-      document.getElementById('article-editor').classList.add('active');
-      bindUploadHandlers();
-      bindDraftAutosave();
-    }
-
-    function closeArticleEditor() {
-      document.getElementById('article-editor').classList.remove('active');
-      clearDraft(currentEditId);
-      currentEditId = null;
-    }
-
-    function editArticle(id) {
-      showArticleEditor(id);
-    }
-
-    // 文章暂存功能
-    let draftTimer = null;
-    function bindDraftAutosave() {
-      const contentEl = document.getElementById('article-content');
-      const titleEl = document.getElementById('article-title');
-      if (!contentEl) return;
-
-      const draftKey = currentEditId ? `article-draft-${currentEditId}` : 'article-draft-new';
-
-      // 检查是否有暂存内容
-      const saved = localStorage.getItem(draftKey);
-      if (saved) {
-        try {
-          const draft = JSON.parse(saved);
-          if (draft.content && draft.content !== contentEl.value) {
-            if (confirm('发现未保存的暂存内容，是否恢复？')) {
-              contentEl.value = draft.content || '';
-              if (draft.title) titleEl.value = draft.title;
-              if (draft.tags) document.getElementById('article-tags').value = draft.tags;
-              if (draft.author) document.getElementById('article-author').value = draft.author;
-              if (draft.status) document.getElementById('article-status').value = draft.status;
-            }
-          }
-        } catch (e) {}
-      }
-
-      // 自动暂存（防抖 1 秒）
-      const autoSave = () => {
-        clearTimeout(draftTimer);
-        draftTimer = setTimeout(() => {
-          const draft = {
-            title: titleEl.value,
-            content: contentEl.value,
-            tags: document.getElementById('article-tags').value,
-            author: document.getElementById('article-author').value,
-            status: document.getElementById('article-status').value,
-            timestamp: Date.now()
-          };
-          localStorage.setItem(draftKey, JSON.stringify(draft));
-        }, 1000);
-      };
-
-      contentEl.removeEventListener('input', autoSave);
-      contentEl.addEventListener('input', autoSave);
-      titleEl.removeEventListener('input', autoSave);
-      titleEl.addEventListener('input', autoSave);
-    }
-
-    function clearDraft(id) {
-      localStorage.removeItem(id ? `article-draft-${id}` : 'article-draft-new');
-    }
-
-    async function saveArticle(status) {
-      const articleStatus = status || document.getElementById('article-status').value || 'draft';
-      const article = {
-        title: document.getElementById('article-title').value,
-        slug: document.getElementById('article-slug').value,
-        category: document.getElementById('article-category').value,
-        tags: document.getElementById('article-tags').value.split(',').map(t => t.trim()).filter(t => t),
-        content: document.getElementById('article-content').value,
-        excerpt: document.getElementById('article-content').value.substring(0, settings.excerpt) + '...',
-        status: articleStatus,
-        publishDate: articleStatus === 'published' ? new Date().toISOString().split('T')[0] : null,
-        updateDate: new Date().toISOString().split('T')[0],
-        author: document.getElementById('article-author').value || settings.author
-      };
-
-      const url = currentEditId ? `/api/articles/${currentEditId}` : '/api/articles';
-      const method = currentEditId ? 'PUT' : 'POST';
-
-      await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(article)
-      });
-
-      closeArticleEditor();
-      loadArticles();
-      loadStats();
-    }
-
-    async function deleteArticle(id) {
-      if (confirm('确定删除这篇文章？')) {
-        await fetch(`/api/articles/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-        clearDraft(id);
-        loadArticles();
-        loadStats();
-      }
-    }
-
-    // 分类管理
-    async function loadCategories() {
-      const res = await fetch('/api/categories', { headers: getAuthHeaders() });
-      const data = await res.json();
-      categories = data.categories || data || [];
-      renderCategories();
-    }
-
-    function renderCategories() {
-      const tbody = document.getElementById('categories-table');
-      const emptyState = document.getElementById('categories-empty');
-      
-      if (categories.length === 0) {
-        tbody.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-      }
-      
-      emptyState.style.display = 'none';
-      tbody.innerHTML = categories.map(category => `
-        <tr>
-          <td><strong>${category.name}</strong></td>
-          <td><span class="tag tag-gray">${category.slug || '-'}</span></td>
-          <td style="color: #94a3b8;">${category.description || '-'}</td>
-          <td><span class="tag">${category.count || 0}</span></td>
-          <td class="actions">
-            <button class="btn btn-sm btn-secondary" onclick="editCategory('${category.id}')">编辑</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteCategory('${category.id}')">删除</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function showCategoryModal(id = null) {
-      currentEditId = id;
-      if (id) {
-        const category = categories.find(c => c.id === id);
-        if (category) {
-          document.getElementById('category-name').value = category.name || '';
-          document.getElementById('category-slug').value = category.slug || '';
-          document.getElementById('category-description').value = category.description || '';
-        }
-        document.getElementById('category-modal-title').textContent = '编辑分类';
-      } else {
-        document.getElementById('category-name').value = '';
-        document.getElementById('category-slug').value = '';
-        document.getElementById('category-description').value = '';
-        document.getElementById('category-modal-title').textContent = '新建分类';
-      }
-      showModal('category-modal');
-    }
-
-    function editCategory(id) {
-      showCategoryModal(id);
-    }
-
-    async function saveCategory() {
-      const category = {
-        name: document.getElementById('category-name').value,
-        slug: document.getElementById('category-slug').value,
-        description: document.getElementById('category-description').value
-      };
-
-      const url = currentEditId ? `/api/categories/${currentEditId}` : '/api/categories';
-      const method = currentEditId ? 'PUT' : 'POST';
-
-      await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(category)
-      });
-
-      closeModal('category-modal');
-      loadCategories();
-      loadStats();
-    }
-
-    async function deleteCategory(id) {
-      if (confirm('确定删除这个分类？')) {
-        await fetch(`/api/categories/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-        loadCategories();
-        loadStats();
-      }
-    }
-
-    // 标签管理
-    async function loadTags() {
-      const res = await fetch('/api/tags', { headers: getAuthHeaders() });
-      const data = await res.json();
-      tags = data.tags || data || [];
-      renderTags();
-    }
-
-    function renderTags() {
-      const tbody = document.getElementById('tags-table');
-      const emptyState = document.getElementById('tags-empty');
-      
-      if (tags.length === 0) {
-        tbody.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-      }
-      
-      emptyState.style.display = 'none';
-      tbody.innerHTML = tags.map(tag => `
-        <tr>
-          <td><strong>${tag.name}</strong></td>
-          <td><span class="tag tag-gray">${tag.slug || '-'}</span></td>
-          <td style="color: #94a3b8;">${tag.description || '-'}</td>
-          <td><span class="tag">${tag.count || 0}</span></td>
-          <td class="actions">
-            <button class="btn btn-sm btn-secondary" onclick="editTag('${tag.id}')">编辑</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteTag('${tag.id}')">删除</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function showTagModal(id = null) {
-      currentEditId = id;
-      if (id) {
-        const tag = tags.find(t => t.id === id);
-        if (tag) {
-          document.getElementById('tag-name').value = tag.name || '';
-          document.getElementById('tag-slug').value = tag.slug || '';
-          document.getElementById('tag-description').value = tag.description || '';
-        }
-        document.getElementById('tag-modal-title').textContent = '编辑标签';
-      } else {
-        document.getElementById('tag-name').value = '';
-        document.getElementById('tag-slug').value = '';
-        document.getElementById('tag-description').value = '';
-        document.getElementById('tag-modal-title').textContent = '新建标签';
-      }
-      showModal('tag-modal');
-    }
-
-    function editTag(id) {
-      showTagModal(id);
-    }
-
-    async function saveTag() {
-      const tag = {
-        name: document.getElementById('tag-name').value,
-        slug: document.getElementById('tag-slug').value,
-        description: document.getElementById('tag-description').value
-      };
-
-      const url = currentEditId ? `/api/tags/${currentEditId}` : '/api/tags';
-      const method = currentEditId ? 'PUT' : 'POST';
-
-      await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(tag)
-      });
-
-      closeModal('tag-modal');
-      loadTags();
-      loadStats();
-    }
-
-    async function deleteTag(id) {
-      if (confirm('确定删除这个标签？')) {
-        await fetch(`/api/tags/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-        loadTags();
-        loadStats();
-      }
-    }
-
-    // 加载分类到文章编辑器的选择框
-    async function loadCategoriesForSelect() {
-      if (categories.length === 0) {
-        const res = await fetch('/api/categories', { headers: getAuthHeaders() });
-        const data = await res.json();
-        categories = data.categories || data || [];
-      }
-      const select = document.getElementById('article-category');
-      select.innerHTML = '<option value="">选择分类</option>' + 
-        categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    }
-
-    /* ========== 头像裁剪 ========== */
-    let cropImg = null;
-    let cropArea = { x: 0, y: 0, size: 0 };
-    let cropDragging = false;
-    let cropDragStart = { x: 0, y: 0 };
-    let cropZoom = 1;
-
-    function openCropModal(file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          cropImg = img;
-          initCropCanvas();
-          document.getElementById('crop-modal').style.display = 'flex';
-          document.getElementById('crop-modal').style.alignItems = 'center';
-          document.getElementById('crop-modal').style.justifyContent = 'center';
-          document.getElementById('crop-zoom').value = 100;
-          cropZoom = 1;
-          document.getElementById('crop-zoom-val').textContent = '100%';
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function initCropCanvas() {
-      const canvas = document.getElementById('crop-canvas');
-      const ctx = canvas.getContext('2d');
-      const container = document.getElementById('crop-container');
-      const maxDim = Math.min(440, window.innerWidth - 80, window.innerHeight - 300);
-
-      let w = cropImg.naturalWidth;
-      let h = cropImg.naturalHeight;
-      const scale = Math.min(maxDim / w, maxDim / h, 1);
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-
-      canvas.width = w;
-      canvas.height = h;
-      container.style.width = w + 'px';
-      container.style.height = h + 'px';
-
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(cropImg, 0, 0, w, h);
-
-      const size = Math.min(w, h);
-      cropArea = { x: (w - size) / 2, y: (h - size) / 2, size: size, imgW: w, imgH: h, scale: scale };
-      drawCropOverlay();
-      updateCropPreview();
-    }
-
-    function drawCropOverlay() {
-      const canvas = document.getElementById('crop-canvas');
-      const { x, y, size, imgW, imgH } = cropArea;
-
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, imgW, imgH);
-      ctx.drawImage(cropImg, 0, 0, imgW, imgH);
-
-      // 半透明遮罩
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, imgW, imgH);
-
-      // 清除裁剪区域
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(cropImg, 0, 0, imgW, imgH);
-      ctx.restore();
-
-      // 裁剪边框
-      ctx.strokeStyle = 'rgba(255,215,0,0.8)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 十字线
-      ctx.strokeStyle = 'rgba(255,215,0,0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x + size * 0.33, y + size / 2);
-      ctx.lineTo(x + size * 0.67, y + size / 2);
-      ctx.moveTo(x + size / 2, y + size * 0.33);
-      ctx.lineTo(x + size / 2, y + size * 0.67);
-      ctx.stroke();
-    }
-
-    function updateCropPreview() {
-      const canvas = document.getElementById('crop-canvas');
-      const { x, y, size, imgW, imgH, scale } = cropArea;
-      const previewSize = 64;
-
-      // 圆形预览
-      const pc = document.getElementById('crop-preview-circle');
-      const pctx = pc.getContext('2d');
-      pctx.clearRect(0, 0, previewSize, previewSize);
-      pctx.save();
-      pctx.beginPath();
-      pctx.arc(previewSize/2, previewSize/2, previewSize/2, 0, Math.PI*2);
-      pctx.clip();
-      const sx = x / scale, sy = y / scale, sSize = size / scale;
-      pctx.drawImage(cropImg, sx, sy, sSize, sSize, 0, 0, previewSize, previewSize);
-      pctx.restore();
-
-      // 方形预览
-      const sc = document.getElementById('crop-preview-square');
-      const sctx = sc.getContext('2d');
-      sctx.clearRect(0, 0, previewSize, previewSize);
-      sctx.drawImage(cropImg, sx, sy, sSize, sSize, 0, 0, previewSize, previewSize);
-    }
-
-    // 拖动裁剪区域
-    document.getElementById('crop-canvas').addEventListener('mousedown', (e) => {
-      const rect = e.target.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const { x, y, size } = cropArea;
-      if (mx >= x && mx <= x + size && my >= y && my <= y + size) {
-        cropDragging = true;
-        cropDragStart = { x: mx - x, y: my - y };
-        e.target.style.cursor = 'grabbing';
-      }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!cropDragging) return;
-      const canvas = document.getElementById('crop-canvas');
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      let nx = mx - cropDragStart.x;
-      let ny = my - cropDragStart.y;
-      nx = Math.max(0, Math.min(cropArea.imgW - cropArea.size, nx));
-      ny = Math.max(0, Math.min(cropArea.imgH - cropArea.size, ny));
-      cropArea.x = nx;
-      cropArea.y = ny;
-      drawCropOverlay();
-      updateCropPreview();
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (cropDragging) {
-        cropDragging = false;
-        document.getElementById('crop-canvas').style.cursor = 'crosshair';
-      }
-    });
-
-    // 缩放滑块
-    document.getElementById('crop-zoom').addEventListener('input', (e) => {
-      cropZoom = e.target.value / 100;
-      document.getElementById('crop-zoom-val').textContent = e.target.value + '%';
-      applyCropZoom();
-    });
-
-    function applyCropZoom() {
-      const { imgW, imgH, scale } = cropArea;
-      const baseSize = Math.min(imgW, imgH);
-      let newSize = baseSize / cropZoom;
-      newSize = Math.max(40, Math.min(baseSize, newSize));
-      cropArea.size = newSize;
-      cropArea.x = Math.max(0, Math.min(imgW - newSize, cropArea.x));
-      cropArea.y = Math.max(0, Math.min(imgH - newSize, cropArea.y));
-      drawCropOverlay();
-      updateCropPreview();
-    }
-
-    function closeCropModal() {
-      document.getElementById('crop-modal').style.display = 'none';
-      cropImg = null;
-      cropDragging = false;
-    }
-
-    async function confirmCrop() {
-      if (!cropImg) return;
-      const { x, y, size, imgW, imgH, scale } = cropArea;
-
-      // 在原始分辨率上裁剪
-      const sx = x / scale, sy = y / scale, sSize = size / scale;
-      const outCanvas = document.createElement('canvas');
-      outCanvas.width = 512;
-      outCanvas.height = 512;
-      const ctx = outCanvas.getContext('2d');
-      ctx.drawImage(cropImg, sx, sy, sSize, sSize, 0, 0, 512, 512);
-
-      outCanvas.toBlob(async (blob) => {
-        const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-        closeCropModal();
-
-        const statusEl = document.getElementById('avatar-status');
-        statusEl.textContent = '上传中...';
-        statusEl.style.color = '#ffd700';
-
-        try {
-          const url = await uploadImage(file, false, 'avatar');
-          settings.avatar = url;
-          const preview = document.getElementById('avatar-preview');
-          preview.src = url;
-          preview.style.display = 'block';
-          statusEl.textContent = '上传成功';
-          statusEl.style.color = '#10b981';
-          await saveSettings();
-        } catch (error) {
-          statusEl.textContent = '上传失败';
-          statusEl.style.color = '#ef4444';
-        }
-      }, 'image/jpeg', 0.92);
-    }
-
-    /* ========== 主题配置 ========== */
-    let currentTheme = {
-      name: '暗金赛博朋克',
-      preset: 'cyberpunk',
-      background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.7 },
-      colors: {},
-      fonts: {},
-      effects: {},
-      borderRadius: {}
-    };
-
-    // 预设主题
-    const themePresets = {
-      cyberpunk: {
-        name: '暗金赛博朋克',
-        preset: 'cyberpunk',
-        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.7 },
-        colors: {
-          background: '#0a0a0f', surface: '#141837', surfaceLight: '#202648', border: '#2a2a3a',
-          primary: '#6366f1', primaryLight: '#818cf8', primaryDark: '#4f46e5',
-          secondary: '#8b5cf6', secondaryLight: '#a78bfa',
-          accent: '#C4612F', accentLight: '#A94E22',
-          textPrimary: '#ffffff', textSecondary: '#a0aec0', textMuted: '#5C635D',
-          success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6'
-        },
-        fonts: { heading: 'Fraunces, serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
-        effects: { pixelSnow: true, sideRays: true, splashCursor: true, gridOverlay: true, glassEffect: true, animations: true },
-        borderRadius: { sm: '0.25rem', md: '0.5rem', lg: '1rem', xl: '1.5rem' }
-      },
-      minimal: {
-        name: '极简白',
-        preset: 'minimal',
-        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.9 },
-        colors: {
-          background: '#ffffff', surface: '#f8f9fa', surfaceLight: '#e9ecef', border: '#dee2e6',
-          primary: '#000000', primaryLight: '#333333', primaryDark: '#000000',
-          secondary: '#6c757d', secondaryLight: '#868e96',
-          accent: '#0066cc', accentLight: '#3399ff',
-          textPrimary: '#212529', textSecondary: '#495057', textMuted: '#6c757d',
-          success: '#28a745', warning: '#ffc107', error: '#dc3545', info: '#17a2b8'
-        },
-        fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
-        effects: { pixelSnow: false, sideRays: false, splashCursor: false, gridOverlay: false, glassEffect: false, animations: true },
-        borderRadius: { sm: '0.25rem', md: '0.375rem', lg: '0.5rem', xl: '0.75rem' }
-      },
-      dark: {
-        name: '暗色',
-        preset: 'dark',
-        background: { image: '', size: 'cover', position: 'center', repeat: 'no-repeat', overlay: 0.8 },
-        colors: {
-          background: '#1a1a1a', surface: '#2d2d2d', surfaceLight: '#3d3d3d', border: '#404040',
-          primary: '#60a5fa', primaryLight: '#93c5fd', primaryDark: '#3b82f6',
-          secondary: '#a78bfa', secondaryLight: '#c4b5fd',
-          accent: '#f59e0b', accentLight: '#fbbf24',
-          textPrimary: '#f5f5f5', textSecondary: '#d4d4d4', textMuted: '#a3a3a3',
-          success: '#34d399', warning: '#fbbf24', error: '#f87171', info: '#60a5fa'
-        },
-        fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif', code: 'Fira Code, monospace' },
-        effects: { pixelSnow: false, sideRays: false, splashCursor: true, gridOverlay: false, glassEffect: true, animations: true },
-        borderRadius: { sm: '0.25rem', md: '0.5rem', lg: '0.75rem', xl: '1rem' }
-      }
-    };
-
-    // 加载主题配置到 UI
-    function loadThemeToUI(theme) {
-      currentTheme = JSON.parse(JSON.stringify(theme));
-
-      // 主题名称
-      document.getElementById('theme-name').value = theme.name || '';
-      document.getElementById('theme-name-status').textContent = theme.preset === 'custom' ? '(自定义)' : '';
-
-      // 背景图片
-      if (theme.background) {
-        document.getElementById('theme-bg-image').value = theme.background.image || '';
-        document.getElementById('theme-bg-size').value = theme.background.size || 'cover';
-        document.getElementById('theme-bg-position').value = theme.background.position || 'center';
-        document.getElementById('theme-bg-overlay').value = theme.background.overlay || 0.7;
-        document.getElementById('theme-bg-overlay-val').textContent = theme.background.overlay || 0.7;
-
-        const bgPreview = document.getElementById('theme-bg-preview');
-        const bgPlaceholder = document.getElementById('theme-bg-placeholder');
-        const imageDimensions = document.getElementById('image-dimensions');
-
-        if (theme.background.image) {
-          bgPreview.style.display = 'block';
-          bgPlaceholder.style.display = 'none';
-          bgPreview.style.backgroundImage = `url(${theme.background.image})`;
-          bgPreview.style.backgroundSize = theme.background.size || 'cover';
-          bgPreview.style.backgroundPosition = theme.background.position || 'center';
-          bgPreview.style.backgroundRepeat = 'no-repeat';
-
-          // 加载图片获取实际尺寸
-          const img = new Image();
-          img.onload = function() {
-            const sizeKB = Math.round(this.naturalWidth * this.naturalHeight * 3 / 1024);
-            imageDimensions.textContent = `原始尺寸: ${this.naturalWidth} × ${this.naturalHeight} px (~${sizeKB} KB)`;
-          };
-          img.onerror = function() {
-            imageDimensions.textContent = '图片加载失败';
-          };
-          img.src = theme.background.image;
-
-          // 创建或更新遮罩层
-          let overlay = bgPreview.querySelector('.preview-overlay');
-          if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.className = 'preview-overlay';
-            overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; pointer-events: none; z-index: 1;';
-            bgPreview.insertBefore(overlay, bgPreview.firstChild);
-          }
-          overlay.style.opacity = theme.background.overlay || 0.7;
-
-          // 确保标签在最上层
-          const labels = bgPreview.querySelectorAll('div:not(.preview-overlay)');
-          labels.forEach(label => label.style.zIndex = '2');
-        } else {
-          bgPreview.style.display = 'none';
-          bgPlaceholder.style.display = 'flex';
-          imageDimensions.textContent = '';
-        }
-      }
-
-      // 颜色
-      Object.entries(theme.colors).forEach(([key, value]) => {
-        const colorInput = document.getElementById(`theme-color-${key}`);
-        const hexInput = document.getElementById(`theme-color-${key}-hex`);
-        if (colorInput) colorInput.value = value;
-        if (hexInput) hexInput.value = value;
-      });
-
-      // 字体
-      document.getElementById('theme-font-heading').value = theme.fonts.heading || '';
-      document.getElementById('theme-font-body').value = theme.fonts.body || '';
-      document.getElementById('theme-font-code').value = theme.fonts.code || '';
-
-      // 特效
-      Object.entries(theme.effects).forEach(([key, value]) => {
-        const checkbox = document.getElementById(`theme-effect-${key}`);
-        if (checkbox) checkbox.checked = value;
-      });
-
-      // 圆角
-      document.getElementById('theme-radius-sm').value = theme.borderRadius.sm || '';
-      document.getElementById('theme-radius-md').value = theme.borderRadius.md || '';
-      document.getElementById('theme-radius-lg').value = theme.borderRadius.lg || '';
-      document.getElementById('theme-radius-xl').value = theme.borderRadius.xl || '';
-
-      updateThemePreview();
-    }
-
-    // 从 UI 读取主题配置
-    function readThemeFromUI() {
-      const theme = { ...currentTheme };
-
-      // 主题名称
-      theme.name = document.getElementById('theme-name').value || '未命名主题';
-
-      // 背景图片
-      theme.background = {
-        image: document.getElementById('theme-bg-image').value,
-        size: document.getElementById('theme-bg-size').value,
-        position: document.getElementById('theme-bg-position').value,
-        repeat: 'no-repeat',
-        overlay: parseFloat(document.getElementById('theme-bg-overlay').value)
-      };
-
-      // 字体
-      theme.fonts = {
-        heading: document.getElementById('theme-font-heading').value,
-        body: document.getElementById('theme-font-body').value,
-        code: document.getElementById('theme-font-code').value
-      };
-
-      // 圆角
-      theme.borderRadius = {
-        sm: document.getElementById('theme-radius-sm').value,
-        md: document.getElementById('theme-radius-md').value,
-        lg: document.getElementById('theme-radius-lg').value,
-        xl: document.getElementById('theme-radius-xl').value
-      };
-
-      return theme;
-    }
-
-    // 更新颜色（修改预设主题时自动保存为自定义主题）
-    function updateThemeColor(key, value) {
-      // 如果当前是预设主题，自动转换为自定义主题
-      if (currentTheme.preset !== 'custom') {
-        currentTheme.preset = 'custom';
-        document.getElementById('theme-name-status').textContent = '(自定义)';
-      }
-      currentTheme.colors[key] = value;
-      document.getElementById(`theme-color-${key}-hex`).value = value;
-      updateThemePreview();
-      autoSave();
-    }
-
-    function updateThemeColorFromHex(key, value) {
-      if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-        // 如果当前是预设主题，自动转换为自定义主题
-        if (currentTheme.preset !== 'custom') {
-          currentTheme.preset = 'custom';
-          document.getElementById('theme-name-status').textContent = '(自定义)';
-        }
-        currentTheme.colors[key] = value;
-        document.getElementById(`theme-color-${key}`).value = value;
-        updateThemePreview();
-        autoSave();
-      }
-    }
-
-    // 更新特效
-    function updateThemeEffect(key, value) {
-      currentTheme.effects[key] = value;
-      updateThemePreview();
-      autoSave();
-    }
-
-    // 更新背景图片
-    function updateThemeBg() {
-      currentTheme.background = {
-        image: document.getElementById('theme-bg-image').value,
-        size: document.getElementById('theme-bg-size').value,
-        position: document.getElementById('theme-bg-position').value,
-        repeat: 'no-repeat',
-        overlay: parseFloat(document.getElementById('theme-bg-overlay').value)
-      };
-
-      const bgPreview = document.getElementById('theme-bg-preview');
-      const bgPlaceholder = document.getElementById('theme-bg-placeholder');
-      const imageDimensions = document.getElementById('image-dimensions');
-
-      if (currentTheme.background.image) {
-        bgPreview.style.display = 'block';
-        bgPlaceholder.style.display = 'none';
-        bgPreview.style.backgroundImage = `url(${currentTheme.background.image})`;
-        bgPreview.style.backgroundSize = currentTheme.background.size;
-        bgPreview.style.backgroundPosition = currentTheme.background.position;
-        bgPreview.style.backgroundRepeat = 'no-repeat';
-
-        // 加载图片获取实际尺寸
-        const img = new Image();
-        img.onload = function() {
-          const sizeKB = Math.round(this.naturalWidth * this.naturalHeight * 3 / 1024);
-          imageDimensions.textContent = `原始尺寸: ${this.naturalWidth} × ${this.naturalHeight} px (~${sizeKB} KB)`;
-        };
-        img.onerror = function() {
-          imageDimensions.textContent = '图片加载失败';
-        };
-        img.src = currentTheme.background.image;
-
-        // 更新遮罩层
-        let overlay = bgPreview.querySelector('.preview-overlay');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.className = 'preview-overlay';
-          overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; pointer-events: none; z-index: 1;';
-          bgPreview.insertBefore(overlay, bgPreview.firstChild);
-        }
-        overlay.style.opacity = currentTheme.background.overlay;
-
-        // 确保标签在最上层
-        const labels = bgPreview.querySelectorAll('div:not(.preview-overlay)');
-        labels.forEach(label => label.style.zIndex = '2');
-      } else {
-        bgPreview.style.display = 'none';
-        bgPlaceholder.style.display = 'flex';
-        imageDimensions.textContent = '';
-      }
-      autoSave();
-    }
-
-    // 上传背景图片
-    async function handleBgImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      try {
-        const url = await uploadImage(file, false, 'background');
-        document.getElementById('theme-bg-image').value = url;
-        updateThemeBg();
-      } catch (e) {
-        alert('上传失败：' + e.message);
-      }
-      event.target.value = '';
-    }
-
-    // 应用预设
-    function applyPreset(presetId) {
-      const preset = themePresets[presetId];
-      if (preset) {
-        loadThemeToUI(preset);
-      }
-    }
-
-    // 更新预览
-    function updateThemePreview() {
-      const preview = document.getElementById('theme-preview');
-      const c = currentTheme.colors;
-      const r = currentTheme.borderRadius;
-      const f = currentTheme.fonts;
-
-      preview.style.background = c.background;
-      preview.style.borderColor = c.border;
-      preview.style.color = c.textPrimary;
-
-      // 更新预览中的子元素
-      const avatar = preview.querySelector('div > div:first-child');
-      if (avatar) {
-        avatar.style.background = c.primary;
-        avatar.style.color = c.textPrimary;
-      }
-      const title = preview.querySelector('div > div:last-child > div:first-child');
-      if (title) title.style.color = c.textPrimary;
-      const desc = preview.querySelector('div > div:last-child > div:last-child');
-      if (desc) desc.style.color = c.textSecondary;
-      const btn1 = preview.querySelector('button:first-child');
-      if (btn1) {
-        btn1.style.background = c.primary;
-        btn1.style.color = c.textPrimary;
-        btn1.style.borderRadius = r.md;
-      }
-      const btn2 = preview.querySelector('button:nth-child(2)');
-      if (btn2) {
-        btn2.style.color = c.textSecondary;
-        btn2.style.borderColor = c.border;
-        btn2.style.borderRadius = r.md;
-      }
-      const badge1 = preview.querySelector('span:first-of-type');
-      if (badge1) {
-        badge1.style.background = c.success;
-        badge1.style.borderRadius = r.sm;
-      }
-      const badge2 = preview.querySelector('span:last-of-type');
-      if (badge2) {
-        badge2.style.background = c.error;
-        badge2.style.borderRadius = r.sm;
-      }
-    }
-
-    // 导出主题
-    function exportTheme() {
-      const theme = readThemeFromUI();
-      const blob = new Blob([JSON.stringify(theme, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `theme-${theme.name || 'custom'}-${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // 导入主题
-    function importTheme() {
-      document.getElementById('theme-file-input').click();
-    }
-
-    function handleThemeFileImport(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const imported = JSON.parse(e.target.result);
-
-          // 验证必要字段
-          if (!imported.colors || !imported.fonts || !imported.effects || !imported.borderRadius) {
-            alert('主题文件格式不完整，缺少必要的 colors/fonts/effects/borderRadius 字段');
-            return;
-          }
-
-          // 合并默认值
-          const merged = {
-            name: imported.name || '导入的主题',
-            preset: 'custom',
-            background: { ...themePresets.cyberpunk.background, ...imported.background },
-            colors: { ...themePresets.cyberpunk.colors, ...imported.colors },
-            fonts: { ...themePresets.cyberpunk.fonts, ...imported.fonts },
-            effects: { ...themePresets.cyberpunk.effects, ...imported.effects },
-            borderRadius: { ...themePresets.cyberpunk.borderRadius, ...imported.borderRadius }
-          };
-
-          loadThemeToUI(merged);
-          alert('主题导入成功！请点击保存按钮应用主题。');
-        } catch (err) {
-          alert('解析主题文件失败：' + err.message);
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
-    }
-
-    // 在保存设置时包含主题
-    const originalSaveSettings = saveSettings;
-    saveSettings = async function() {
-      const theme = readThemeFromUI();
-      settings.theme = theme;
-      return originalSaveSettings.call(this);
-    };
-  </script>
+  <script defer src="/js/auth.js"></script>
+  <script defer src="/js/state.js"></script>
+  <script defer src="/js/settings.js"></script>
+  <script defer src="/js/core.js"></script>
+  <script defer src="/js/uploads.js"></script>
+  <script defer src="/js/articles.js"></script>
+  <script defer src="/js/taxonomy.js"></script>
+  <script defer src="/js/crop.js"></script>
+  <script defer src="/js/theme.js"></script>
+  <script defer src="/js/pagination.js"></script>
+  <script defer src="/js/events.js"></script>
+  <script defer src="/js/bootstrap.js"></script>
 </body>
 </html>

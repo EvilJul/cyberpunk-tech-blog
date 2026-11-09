@@ -1,4 +1,6 @@
 import express from 'express'
+import { randomUUID } from 'node:crypto'
+import { authMiddleware, adminOnly } from '../middleware/auth.js'
 import multer from 'multer'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
@@ -9,7 +11,10 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const router = express.Router()
 
-const uploadDir = join(__dirname, '..', 'data', 'uploads')
+const uploadDir = join(
+  process.env.BLOG_DATA_DIR || join(__dirname, '..', 'data'),
+  'uploads'
+)
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true })
 }
@@ -24,7 +29,12 @@ const fileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('不支持的文件类型。只允许上传 JPEG、PNG、WebP 和 GIF 格式的图片'), false)
+    cb(
+      new Error(
+        '不支持的文件类型。只允许上传 JPEG、PNG、WebP 和 GIF 格式的图片'
+      ),
+      false
+    )
   }
 }
 
@@ -32,21 +42,51 @@ const upload = multer({
   storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
-    files: 1 // 每次只允许上传 1 个文件
+    files: 1, // 每次只允许上传 1 个文件
+    fields: 4,
+    fieldSize: 1024,
+    parts: 5
   },
   fileFilter
 })
 
-router.post('/', upload.single('image'), async (req, res) => {
+/** 解析旧上传接口的单张图片，并限制文件及表单大小。 */
+const parseImage = (req, res, next) =>
+  upload.single('image')(req, res, /* 解析失败时返回上传错误，否则继续处理图片。 */ (error) => {
+    if (error)
+      return res
+        .status(400)
+        .json({ error: '上传文件或表单无效（图片最大 5MB）' })
+    next()
+  })
+
+// Studio supports both the documented `file` and the settings/media `image` field.
+// The shared limits.files=1 rejects two files even when field names differ.
+/** 兼容工作台的image与file字段，共享限制每次仅上传一张图片。 */
+export const parseStudioImage = (req, res, next) =>
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'file', maxCount: 1 }
+  ])(req, res, /* 处理表单解析错误，并将兼容字段统一为单个上传文件。 */ (error) => {
+    if (error)
+      return res
+        .status(400)
+        .json({ error: '上传文件或表单无效（图片最大 5MB，每次一张）' })
+    req.file = req.files?.image?.[0] || req.files?.file?.[0]
+    next()
+  })
+
+/** 解码校验上传图片，按用途缩放并保存为JPEG后返回访问地址。 */
+export async function handleStudioImage(req, res) {
   try {
     if (!req.file) {
       return res.status(400).json({ error: '没有上传文件' })
     }
 
     // 从请求参数中获取图片类型，默认为普通图片
-    const imageType = req.query.type || req.body.type || 'normal'
+    const imageType = req.query.type || req.body?.type || 'normal'
 
-    const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
+    const filename = `${randomUUID()}.jpg`
     const filepath = join(uploadDir, filename)
 
     // 根据图片类型设置不同的处理参数
@@ -80,7 +120,24 @@ router.post('/', upload.single('image'), async (req, res) => {
       quality = 75
     }
 
-    await sharp(req.file.buffer)
+    // Decode before writing: MIME labels alone do not establish a valid image.
+    try {
+      const metadata = await sharp(req.file.buffer, {
+        limitInputPixels: 40000000
+      }).metadata()
+      if (imageType === 'avatar') {
+        // A target no larger than either source dimension lets cover crop small
+        // rectangular inputs too, without ever enlarging their pixels.
+        resizeOptions.width = resizeOptions.height = Math.min(
+          400,
+          metadata.width,
+          metadata.height
+        )
+      }
+    } catch {
+      return res.status(400).json({ error: '图片内容无效或尺寸过大' })
+    }
+    await sharp(req.file.buffer, { limitInputPixels: 40000000 })
       .resize(resizeOptions)
       .jpeg({ quality, mozjpeg: true })
       .toFile(filepath)
@@ -107,6 +164,9 @@ router.post('/', upload.single('image'), async (req, res) => {
     console.error('上传失败:', error)
     res.status(500).json({ error: '上传失败，请稍后重试' })
   }
-})
+}
+
+// Session callers mount the exported adapter behind their own session + CSRF guards.
+router.post('/', authMiddleware, adminOnly, parseImage, handleStudioImage)
 
 export default router

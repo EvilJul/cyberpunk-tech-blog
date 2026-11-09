@@ -56,4 +56,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 日志权限与容量验收
 - **WHEN** 提交非法级别、超限消息或普通用户清空日志
 - **THEN** 请求被拒绝且不会追加或清空日志
-

@@ -52,4 +52,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 可读与可访问阅读交互验收
 - **WHEN** 在浅色主题阅读含重复标题和多图长文并使用键盘
 - **THEN** 文字清晰、目录准确、预览可 Escape 关闭且恢复焦点，阅读时长可见
-

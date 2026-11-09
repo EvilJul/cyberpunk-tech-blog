@@ -52,4 +52,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 服务生命周期验收
 - **WHEN** 持续请求期间发送退出信号或触发进程级异常
 - **THEN** 连接排空后关闭数据库；致命异常不继续以健康状态运行，重启后已提交记录可读
-

@@ -9,13 +9,13 @@
     function renderCategories() {
       const tbody = document.getElementById('categories-table');
       const emptyState = document.getElementById('categories-empty');
-      
+
       if (categories.length === 0) {
         tbody.innerHTML = '';
         emptyState.style.display = 'block';
         return;
       }
-      
+
       emptyState.style.display = 'none';
       tbody.innerHTML = categories.map(category => `
         <tr>
@@ -94,13 +94,13 @@
     function renderTags() {
       const tbody = document.getElementById('tags-table');
       const emptyState = document.getElementById('tags-empty');
-      
+
       if (tags.length === 0) {
         tbody.innerHTML = '';
         emptyState.style.display = 'block';
         return;
       }
-      
+
       emptyState.style.display = 'none';
       tbody.innerHTML = tags.map(tag => `
         <tr>
@@ -176,7 +176,6 @@
         categories = data.categories || data || [];
       }
       const select = document.getElementById('article-category');
-      select.innerHTML = '<option value="">选择分类</option>' + 
+      select.innerHTML = '<option value="">选择分类</option>' +
         categories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
     }
-

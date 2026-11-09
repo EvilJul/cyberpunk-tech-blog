@@ -41,7 +41,7 @@
       // 开关状态
       document.getElementById('toggle-grid').classList.toggle('active', settings.grid);
       document.getElementById('toggle-footer').classList.toggle('active', settings.footer);
-      
+
       // 颜色选择
       document.querySelectorAll('.color-option').forEach(opt => {
         opt.classList.toggle('active', opt.dataset.color === settings.color);
@@ -78,7 +78,7 @@
 
       // 保存主题配置
       settings.theme = readThemeFromUI();
-      
+
       try {
         await adminFetch('/api/settings', {
           method: 'PUT',
@@ -148,4 +148,3 @@
         }
       });
     }
-

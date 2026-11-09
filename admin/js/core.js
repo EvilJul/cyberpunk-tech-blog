@@ -8,12 +8,12 @@
           fetch('/api/tags', { headers }),
           fetch('/api/stats/views', { headers })
         ]);
-        
+
         const articlesData = await articlesRes.json();
         const categoriesData = await categoriesRes.json();
         const tagsData = await tagsRes.json();
         const viewsData = await viewsRes.json();
-        
+
         const articlesList = Array.isArray(articlesData) ? articlesData : (articlesData.data || articlesData.articles || []);
         const categoriesList = Array.isArray(categoriesData) ? categoriesData : (categoriesData.categories || []);
         const tagsList = Array.isArray(tagsData) ? tagsData : (tagsData.tags || []);
@@ -32,9 +32,8 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(sectionId).classList.add('active');
       event?.target.closest('.nav-item')?.classList.add('active');
-      
+
       if (sectionId === 'articles') loadArticles();
       if (sectionId === 'categories') loadCategories();
       if (sectionId === 'tags') loadTags();
     }
-

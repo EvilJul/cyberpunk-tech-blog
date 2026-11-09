@@ -1,19 +1,19 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif; 
-      background: #111113; 
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+      background: #111113;
       color: #e8e8ec;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
-    
-    .container { 
-      display: flex; 
+
+    .container {
+      display: flex;
       min-height: 100vh;
     }
-    
+
     /* 侧边栏 */
     .sidebar {
       width: 240px;
@@ -28,20 +28,20 @@
       height: 100vh;
       z-index: 100;
     }
-    
-    .logo { 
-      font-size: 15px; 
-      font-weight: 600; 
+
+    .logo {
+      font-size: 15px;
+      font-weight: 600;
       margin-bottom: 28px;
       padding: 0 10px;
       color: #fafafa;
       letter-spacing: -0.3px;
     }
-    
+
     .nav-section {
       margin-bottom: 20px;
     }
-    
+
     .nav-section-title {
       font-size: 11px;
       font-weight: 500;
@@ -49,11 +49,11 @@
       padding: 0 10px;
       margin-bottom: 6px;
     }
-    
-    .nav-item { 
-      padding: 8px 10px; 
-      cursor: pointer; 
-      border-radius: 6px; 
+
+    .nav-item {
+      padding: 8px 10px;
+      cursor: pointer;
+      border-radius: 6px;
       margin-bottom: 2px;
       color: #a1a1aa;
       font-size: 13px;
@@ -63,39 +63,39 @@
       gap: 10px;
       transition: background 0.15s, color 0.15s;
     }
-    
-    .nav-item:hover { 
-      background: #27272a; 
-      color: #fafafa; 
+
+    .nav-item:hover {
+      background: #27272a;
+      color: #fafafa;
     }
-    
-    .nav-item.active { 
-      background: #27272a; 
-      color: #fafafa; 
+
+    .nav-item.active {
+      background: #27272a;
+      color: #fafafa;
     }
-    
+
     .nav-icon {
       width: 16px;
       height: 16px;
       opacity: 0.5;
       flex-shrink: 0;
     }
-    
+
     .nav-item.active .nav-icon,
     .nav-item:hover .nav-icon {
       opacity: 0.8;
     }
-    
+
     .sidebar-footer {
       margin-top: auto;
       padding-top: 16px;
       border-top: 1px solid #27272a;
     }
-    
+
     .sidebar-footer .nav-item {
       font-size: 12px;
     }
-    
+
     /* 主内容区 */
     .main {
       flex: 1;
@@ -104,36 +104,36 @@
       background: #111113;
       min-height: 100vh;
     }
-    
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 24px;
     }
-    
+
     .header h2 {
       font-size: 20px;
       font-weight: 600;
       color: #fafafa;
       letter-spacing: -0.3px;
     }
-    
+
     .header-subtitle {
       font-size: 13px;
       color: #71717a;
       margin-top: 2px;
     }
-    
+
     /* 卡片 */
-    .card { 
+    .card {
       background: #18181b;
       border: 1px solid #27272a;
       border-radius: 10px;
       padding: 20px;
       margin-bottom: 16px;
     }
-    
+
     .card-header {
       display: flex;
       justify-content: space-between;
@@ -142,13 +142,13 @@
       padding-bottom: 12px;
       border-bottom: 1px solid #27272a;
     }
-    
+
     .card-title {
       font-size: 14px;
       font-weight: 500;
       color: #fafafa;
     }
-    
+
     /* 统计卡片 */
     .stats-grid {
       display: grid;
@@ -156,7 +156,7 @@
       gap: 12px;
       margin-bottom: 20px;
     }
-    
+
     .stat-card {
       background: #18181b;
       border: 1px solid #27272a;
@@ -164,11 +164,11 @@
       padding: 16px;
       text-align: center;
     }
-    
+
     .stat-card:hover {
       border-color: #3f3f46;
     }
-    
+
     .stat-icon {
       width: 32px;
       height: 32px;
@@ -180,7 +180,7 @@
       background: #27272a;
       color: #a1a1aa;
     }
-    
+
     .stat-value {
       font-size: 24px;
       font-weight: 600;
@@ -188,18 +188,18 @@
       margin-bottom: 2px;
       letter-spacing: -0.5px;
     }
-    
+
     .stat-label {
       font-size: 12px;
       color: #71717a;
     }
-    
+
     /* 按钮 */
-    .btn { 
-      padding: 8px 16px; 
-      border: none; 
-      border-radius: 6px; 
-      cursor: pointer; 
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
       font-weight: 500;
       font-size: 13px;
       transition: background 0.15s, border-color 0.15s;
@@ -207,73 +207,73 @@
       align-items: center;
       gap: 6px;
     }
-    
-    .btn-primary { 
-      background: #fafafa; 
+
+    .btn-primary {
+      background: #fafafa;
       color: #18181b;
     }
-    
+
     .btn-primary:hover {
       background: #e4e4e7;
     }
-    
+
     .btn-secondary {
       background: transparent;
       color: #a1a1aa;
       border: 1px solid #3f3f46;
     }
-    
+
     .btn-secondary:hover {
       background: #27272a;
       color: #fafafa;
     }
-    
-    .btn-danger { 
-      background: transparent; 
+
+    .btn-danger {
+      background: transparent;
       color: #ef4444;
       border: 1px solid #3f3f46;
     }
-    
+
     .btn-danger:hover {
       background: rgba(239, 68, 68, 0.1);
       border-color: rgba(239, 68, 68, 0.3);
     }
-    
-    .btn-sm { 
-      padding: 5px 10px; 
-      font-size: 12px; 
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
       border-radius: 5px;
     }
-    
+
     /* 表单 */
-    input, textarea, select { 
-      width: 100%; 
-      padding: 9px 12px; 
-      background: #18181b; 
-      border: 1px solid #27272a; 
-      border-radius: 6px; 
-      color: #fafafa; 
+    input, textarea, select {
+      width: 100%;
+      padding: 9px 12px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 6px;
+      color: #fafafa;
       margin-bottom: 12px;
       font-family: inherit;
       font-size: 13px;
       transition: border-color 0.15s;
     }
-    
+
     input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: #52525b;
     }
-    
+
     input::placeholder, textarea::placeholder {
       color: #52525b;
     }
-    
-    textarea { 
-      min-height: 140px; 
-      resize: vertical; 
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
       line-height: 1.6;
     }
-    
+
     select {
       appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -281,68 +281,68 @@
       background-position: right 10px center;
       padding-right: 32px;
     }
-    
+
     /* 表格 */
     .table-wrapper {
       overflow-x: auto;
       border: 1px solid #27272a;
       border-radius: 8px;
     }
-    
-    table { 
-      width: 100%; 
+
+    table {
+      width: 100%;
       border-collapse: collapse;
     }
-    
-    th, td { 
-      padding: 10px 14px; 
-      text-align: left; 
+
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
     }
-    
-    th { 
-      background: #16161a; 
-      color: #71717a; 
+
+    th {
+      background: #16161a;
+      color: #71717a;
       font-weight: 500;
       font-size: 12px;
       border-bottom: 1px solid #27272a;
     }
-    
+
     td {
       border-bottom: 1px solid #27272a;
       font-size: 13px;
       color: #d4d4d8;
     }
-    
-    tr:hover td { 
-      background: #1c1c1f; 
+
+    tr:hover td {
+      background: #1c1c1f;
     }
-    
+
     tr:last-child td {
       border-bottom: none;
     }
-    
+
     /* 弹窗 */
-    .modal { 
-      display: none; 
-      position: fixed; 
-      top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0, 0, 0, 0.6); 
-      z-index: 1000; 
-      justify-content: center; 
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      justify-content: center;
       align-items: center;
     }
-    
+
     .modal.active { display: flex; }
-    
-    .modal-content { 
-      background: #18181b; 
+
+    .modal-content {
+      background: #18181b;
       border: 1px solid #27272a;
-      border-radius: 10px; 
-      padding: 24px; 
-      width: 480px; 
+      border-radius: 10px;
+      padding: 24px;
+      width: 480px;
       max-width: 90%;
     }
-    
+
     .modal-content.modal-fullscreen {
       width: 90vw;
       height: 85vh;
@@ -351,9 +351,9 @@
       display: flex;
       flex-direction: column;
     }
-    
+
     .modal-fullscreen .modal-header { flex-shrink: 0; }
-    
+
     .modal-fullscreen .editor-body {
       flex: 1;
       display: flex;
@@ -361,19 +361,19 @@
       gap: 12px;
       overflow: hidden;
     }
-    
+
     .modal-fullscreen .editor-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
-    
+
     .modal-fullscreen .editor-row-3 {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 12px;
     }
-    
+
     .modal-fullscreen textarea {
       flex: 1;
       min-height: 0;
@@ -382,7 +382,7 @@
       font-size: 13px;
       line-height: 1.6;
     }
-    
+
     .editor-toolbar {
       display: flex;
       gap: 4px;
@@ -394,7 +394,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    
+
     .editor-toolbar button {
       padding: 5px 8px;
       background: transparent;
@@ -405,19 +405,19 @@
       font-size: 12px;
       transition: background 0.1s, color 0.1s;
     }
-    
+
     .editor-toolbar button:hover {
       background: #27272a;
       color: #fafafa;
     }
-    
+
     .editor-toolbar .separator {
       width: 1px;
       height: 18px;
       background: #27272a;
       margin: 0 4px;
     }
-    
+
     .image-upload-zone {
       border: 1px dashed #3f3f46;
       border-radius: 6px;
@@ -429,13 +429,13 @@
       transition: border-color 0.15s, color 0.15s;
       flex-shrink: 0;
     }
-    
+
     .image-upload-zone:hover,
     .image-upload-zone.dragover {
       border-color: #71717a;
       color: #a1a1aa;
     }
-    
+
     /* 全屏文章编辑器 */
     .editor-page {
       display: none;
@@ -538,29 +538,29 @@
       flex-shrink: 0;
     }
     .editor-bottombar .image-upload-zone { margin: 0; }
-    
+
     .image-upload-zone input { display: none; }
-    
-    .modal-header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 20px;
       padding-bottom: 14px;
       border-bottom: 1px solid #27272a;
     }
-    
+
     .modal-title {
       font-size: 15px;
       font-weight: 500;
       color: #fafafa;
     }
-    
-    .modal-close { 
-      background: none; 
-      border: none; 
-      color: #71717a; 
-      font-size: 20px; 
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #71717a;
+      font-size: 20px;
       cursor: pointer;
       width: 28px;
       height: 28px;
@@ -570,20 +570,20 @@
       border-radius: 5px;
       transition: background 0.15s, color 0.15s;
     }
-    
-    .modal-close:hover { 
-      color: #fafafa; 
+
+    .modal-close:hover {
+      color: #fafafa;
       background: #27272a;
     }
-    
+
     .section { display: none; }
     .section.active { display: block; }
-    
-    .actions { 
-      display: flex; 
-      gap: 6px; 
+
+    .actions {
+      display: flex;
+      gap: 6px;
     }
-    
+
     /* 标签 */
     .tag {
       display: inline-flex;
@@ -595,19 +595,19 @@
       font-size: 11px;
       font-weight: 500;
     }
-    
+
     .tag-gray {
       background: #27272a;
       color: #71717a;
     }
-    
+
     /* 设置页面 */
     .settings-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 12px;
     }
-    
+
     .setting-item {
       display: flex;
       justify-content: space-between;
@@ -617,19 +617,19 @@
       border-radius: 8px;
       border: 1px solid #27272a;
     }
-    
+
     .setting-label {
       font-size: 13px;
       font-weight: 500;
       color: #e4e4e7;
       margin-bottom: 2px;
     }
-    
+
     .setting-desc {
       font-size: 11px;
       color: #71717a;
     }
-    
+
     /* 开关 */
     .toggle {
       position: relative;
@@ -640,11 +640,11 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    
+
     .toggle.active {
       background: #3f3f46;
     }
-    
+
     .toggle::after {
       content: '';
       position: absolute;
@@ -656,19 +656,19 @@
       border-radius: 50%;
       transition: all 0.2s;
     }
-    
+
     .toggle.active::after {
       left: 21px;
       background: #fafafa;
     }
-    
+
     /* 颜色选择器 */
     .color-options {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
     }
-    
+
     .color-option {
       width: 32px;
       height: 32px;
@@ -677,83 +677,83 @@
       border: 2px solid transparent;
       transition: border-color 0.15s;
     }
-    
+
     .color-option:hover {
       border-color: #52525b;
     }
-    
+
     .color-option.active {
       border-color: #fafafa;
     }
-    
+
     /* 滚动条 */
     ::-webkit-scrollbar {
       width: 5px;
       height: 5px;
     }
-    
+
     ::-webkit-scrollbar-track {
       background: transparent;
     }
-    
+
     ::-webkit-scrollbar-thumb {
       background: #27272a;
       border-radius: 3px;
     }
-    
+
     ::-webkit-scrollbar-thumb:hover {
       background: #3f3f46;
     }
-    
+
     ::selection {
       background: rgba(161, 161, 170, 0.3);
     }
-    
+
     .empty-state {
       text-align: center;
       padding: 48px 20px;
       color: #52525b;
     }
-    
+
     .empty-icon {
       width: 48px;
       height: 48px;
       margin: 0 auto 12px;
       opacity: 0.3;
     }
-    
+
     .empty-text {
       font-size: 13px;
     }
-    
+
     @media (max-width: 1024px) {
       .sidebar {
         width: 56px;
         padding: 16px 8px;
       }
-      
+
       .logo span,
       .nav-section-title,
       .nav-item span,
       .sidebar-footer .nav-item span {
         display: none;
       }
-      
+
       .nav-item {
         justify-content: center;
         padding: 10px;
       }
-      
+
       .nav-icon { margin: 0; }
-      
+
       .main {
         margin-left: 56px;
       }
-      
+
       .stats-grid {
         grid-template-columns: repeat(2, 1fr);
       }
-      
+
       .settings-grid {
         grid-template-columns: 1fr;
       }

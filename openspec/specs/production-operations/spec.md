@@ -44,4 +44,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 重建恢复
 - **WHEN** 创建草稿并更换背景后重建容器
 - **THEN** 数据与会话状态按设计保留，背景和原文章地址可用，备份可恢复
-

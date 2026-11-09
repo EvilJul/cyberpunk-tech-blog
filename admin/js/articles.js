@@ -15,16 +15,16 @@
     function renderArticles() {
       const tbody = document.getElementById('articles-table');
       const emptyState = document.getElementById('articles-empty');
-      
+
       if (articles.length === 0) {
         tbody.innerHTML = '';
         emptyState.style.display = 'block';
         return;
       }
-      
+
       emptyState.style.display = 'none';
       tbody.innerHTML = articles.map(article => {
-        const statusTag = article.status === 'published' 
+        const statusTag = article.status === 'published'
           ? '<span class="tag" style="background: #10b981; color: white;">已发布</span>'
           : '<span class="tag tag-gray">草稿</span>';
         return `
@@ -174,4 +174,3 @@
         loadStats();
       }
     }
-

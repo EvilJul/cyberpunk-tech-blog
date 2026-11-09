@@ -34,4 +34,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 旧端过渡
 - **WHEN** 运维显式开启legacy-admin并遇上游超时或非JSON
 - **THEN** 分页不丢失，超时504，非JSON不造成解析崩溃
-

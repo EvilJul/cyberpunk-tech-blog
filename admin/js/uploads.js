@@ -131,4 +131,3 @@
       document.getElementById(modalId).classList.remove('active');
       currentEditId = null;
     }
-

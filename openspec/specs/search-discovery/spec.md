@@ -22,4 +22,3 @@ TBD - created by archiving change harden-blog-platform. Update Purpose after arc
 #### Scenario: 分享元信息与语义验收
 - **WHEN** 不执行 JavaScript 的客户端抓取文章或浏览器切换文章
 - **THEN** 直接获得对应文章转义后的标题摘要封面和 canonical，不复用上一文章信息
-

@@ -63,3 +63,15 @@ QUICKSTART.md
 
 # Plugins (if not core)
 plugins/
+
+# Local agent tooling
+.claude/
+.codex/
+.codegraph/
+
+# Temporary debugging artifacts
+debug-*.js
+final-debug.js
+diagnose.sh
+public/diagnose.html
+public/test-*.html

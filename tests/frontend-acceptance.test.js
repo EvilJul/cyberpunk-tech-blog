@@ -196,7 +196,42 @@ test('production browser acceptance: navigation, reading, moderation and request
     const publicComments = await (await fetch(`${base}/api/comments/acceptance-0`)).json()
     assert.ok(publicComments.every(c => c.status === 'approved'))
   })
-  await check('desktop/mobile configured theme reading screenshots and horizontal overflow', /* 验证配置主题与移除切换入口后的响应式阅读。 */ async () => {
+  await check('opaque reading surface isolates bright backgrounds and disables article effects', /* 验证复杂背景下正文稳定不透明，并在离开文章后恢复首页效果容器。 */ async () => {
+    await page.route('**/reading-background.svg', /* 提供高对比色块模拟复杂背景，不使用真实站点数据。 */ route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#ffff00"/><path fill="#ff00ff" d="M0 0h80v80H0zM80 80h80v80H80z"/></svg>' }))
+    await page.route('**/api/settings', /* 仅在隔离浏览器中使用极端主题，核对阅读区不继承低对比配色。 */ async route => {
+      const response = await route.fetch()
+      const data = await response.json()
+      data.settings.theme = { ...data.settings.theme, background: { image: '/reading-background.svg', size: '160px', repeat: 'repeat', overlay: 0 }, colors: { ...data.settings.theme.colors, surface: 'transparent', textPrimary: '#ffff00', textSecondary: '#ffff00' } }
+      await route.fulfill({ response, json: data })
+    })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto(base)
+    await expect(page.locator('[data-reader-effects]')).toHaveCount(1)
+    await expect(page.getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
+    await page.goto(`${base}/article/acceptance-0`)
+    await expect(page.locator('.article-reading .markdown-body')).toBeVisible()
+    await expect(page.locator('[data-reader-effects]')).toHaveCount(0)
+    await expect(page.locator('canvas')).toHaveCount(0)
+    await expect(page.locator('.article-reading')).toHaveCSS('background-color', 'rgb(18, 23, 31)')
+    await expect(page.locator('.markdown-body')).toHaveCSS('color', 'rgb(232, 237, 244)')
+    await expect(page.locator('.comments')).toHaveCSS('color', 'rgb(232, 237, 244)')
+    for (const [size, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844]]) {
+      await page.setViewportSize({ width, height })
+      const textWidth = await page.locator('.markdown-body').evaluate(/* 正文宽度保持在合理阅读范围。 */ element => element.getBoundingClientRect().width)
+      assert.ok(textWidth <= 808)
+      assert.equal(await page.evaluate(/* 页面不得出现横向溢出。 */ () => document.documentElement.scrollWidth > innerWidth), false)
+      await page.locator('.markdown-body blockquote').scrollIntoViewIfNeeded()
+      await page.screenshot({ path: join(artifacts, `reading-panel-${size}.png`), animations: 'disabled' })
+    }
+    await page.goto(base)
+    await expect(page.locator('[data-reader-effects]')).toHaveCount(1)
+    await expect(page.getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
+    await page.unroute('**/api/settings')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto(`${base}/article/acceptance-0`)
+  })
+  await check('desktop/mobile configured theme reading screenshots and horizontal overflow', /* 验证阅读底板的实际对比度与窄屏布局。 */ async () => {
+    await expect(page.locator('.article-reading .markdown-body')).toBeVisible()
     for (const [size, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844]]) {
       await page.setViewportSize({ width, height })
       for (const theme of ['configured']) {
@@ -208,9 +243,9 @@ test('production browser acceptance: navigation, reading, moderation and request
         const filename = `${size}-${theme}.png`
         await page.screenshot({ path: join(artifacts, filename), fullPage: true, animations: 'disabled' })
         evidence.screenshots.push(filename)
-        const contrast = await page.evaluate(() => {
+        const contrast = await page.evaluate(/* 以实际阅读底板测量文字对比度，避免误用外围图片底色。 */ () => {
           const channels = color => (color.match(/[\d.]+/g) || []).map(Number)
-          const body = getComputedStyle(document.body), html = getComputedStyle(document.documentElement)
+          const body = getComputedStyle(document.querySelector('.article-reading')), html = getComputedStyle(document.documentElement)
           const bodyBackground = channels(body.backgroundColor)
           const background = bodyBackground.length === 4 && bodyBackground[3] === 0 ? channels(html.backgroundColor) : bodyBackground
           const foreground = channels(getComputedStyle(document.querySelector('.comments')).color)
@@ -221,7 +256,7 @@ test('production browser acceptance: navigation, reading, moderation and request
         })
         evidence.contrast ||= []
         evidence.contrast.push({ size, theme, ...contrast })
-        assert.ok(contrast.opaque, 'document background must remain opaque below fixed viewport effects')
+        assert.ok(contrast.opaque, 'reading surface must remain opaque above the decorative background')
         assert.ok(contrast.ratio >= 4.5, `bottom reading contrast ${contrast.ratio} must meet 4.5:1`)
 
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${size}/${theme} must not overflow horizontally`)
@@ -260,9 +295,10 @@ test('production browser acceptance: navigation, reading, moderation and request
   })
   await check('unified explore filters, legacy URLs and responsive results', /* 验证统一入口、组合筛选及浏览历史中的状态恢复。 */ async () => {
     for (const legacy of ['categories', 'tags']) {
-      await page.goto(`${base}/${legacy}`)
+      await page.goto(`${base}/${legacy}`, { waitUntil: 'domcontentloaded' })
       await expect(page).toHaveURL(`${base}/explore`)
       await expect(page.getByRole('heading', { name: '探索文章', exact: true })).toBeVisible()
+      await expect(page.locator('.explore-results').getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
     }
     const categories = page.getByRole('group', { name: '分类', exact: true })
     const tags = page.getByRole('group', { name: '标签', exact: true })

@@ -54,7 +54,7 @@ const IntegrationsPage = lazy(
   /* 按需加载集成管理页面。 */ () => import('./components/studio/IntegrationsPage')
 )
 
-/** 渲染读者布局与导航，列表原地搜索，详情页使用搜索弹层。 */
+/** 渲染读者布局，文章页停用装饰特效并保留原地搜索体验。 */
 function Layout() {
   const { user } = useAuth()
   const { settings } = useSettings()
@@ -84,11 +84,12 @@ function Layout() {
   const searchParams = new URLSearchParams(hasSearch ? location.search : '')
   searchParams.set('focus', 'search')
   const searchTarget = { pathname: hasSearch ? location.pathname : '/', search: searchParams.toString() }
+  const isReading = location.pathname.startsWith('/article/')
   const effects = theme?.effects || {}
   return (
     <>
-      {!reducedMotion && (
-        <div aria-hidden="true">
+      {!reducedMotion && !isReading && (
+        <div aria-hidden="true" data-reader-effects>
           {effects.gridOverlay && <GridOverlay />}
           {effects.pixelSnow && <PixelSnow />}
           {effects.splashCursor && <SplashCursor />}
@@ -141,7 +142,7 @@ function Layout() {
           )}
         </div>
       </aside>
-      <main id="main" className="reader-main max-w-6xl mx-auto px-4 py-8">
+      <main id="main" className={`reader-main max-w-6xl mx-auto px-4 py-8 ${isReading ? 'reader-main--article' : ''}`}>
         <Routes>
           <Route path="/" element={<Listing />} />
           <Route path="/category/:name" element={<Directory />} />

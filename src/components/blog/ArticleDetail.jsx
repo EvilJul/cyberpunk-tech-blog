@@ -6,6 +6,8 @@ import CommentSection from './CommentSection'
 import MarkdownContent from './MarkdownContent'
 import { useSettings } from '../../contexts/SettingsContext'
 import { useSeo } from '../../utils/seo'
+import './article-reading.css'
+/** 在独立阅读底板中展示文章、目录与评论，隔离自定义背景干扰。 */
 export default function ArticleDetail() {
   const { user } = useAuth()
   const { slug } = useParams(),
@@ -83,7 +85,7 @@ export default function ArticleDetail() {
   }
   if (!article)
     return (
-      <section>
+      <section className="article-reading article-reading-state">
         {error ? (
           <>
             <h1>{error}</h1>
@@ -97,12 +99,14 @@ export default function ArticleDetail() {
     )
   const words = Array.from((article.content || '').replace(/\s/g, '')).length
   return (
-    <article>
+    <article className="article-reading">
+      <nav className="article-reading-nav" aria-label="文章操作">
       <Link to="/">返回文章列表</Link>
       {user?.role === 'admin' && (
         <Link to={`/studio/editor/${article.id}`}>编辑文章</Link>
       )}
-      <header>
+      </nav>
+      <header className="article-reading-header">
         <h1>{article.title}</h1>
         <time dateTime={article.publish_date || article.publishDate}>
           {article.publish_date || article.publishDate}

@@ -23,7 +23,10 @@ const defaultSettings = {
   author: 'Tech Blogger',
   bio: '探索技术世界，分享编程经验',
   github: '',
-  email: ''
+  email: '',
+  wechatName: '',
+  wechatId: '',
+  wechatQr: ''
 }
 
 export function SettingsProvider({ children }) {

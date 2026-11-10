@@ -11,7 +11,7 @@ export default function Login() {
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false)
   return (
-    <main className="studio">
+    <main className="studio studio--auth">
       <h1>作者登录</h1>
       <form
         onSubmit={/* 提交登录凭据并回到安全站内路径。 */ async (e) => {

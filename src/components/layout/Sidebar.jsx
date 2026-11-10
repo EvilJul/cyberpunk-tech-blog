@@ -2,8 +2,10 @@ import { apiFetch } from '../../utils/api'
 import { Link } from 'react-router-dom'
 import React, { useState, useEffect } from 'react'
 import { useSettings } from '../../contexts/SettingsContext'
-import { User, Tag, Folder, Mail, ExternalLink } from 'lucide-react'
+import ContactLinks from './ContactLinks'
+import { Tag, Folder } from 'lucide-react'
 
+/** 展示作者资料、按配置点亮的联系账号及内容目录。 */
 export default function Sidebar({ total = 0 }) {
   const [stats, setStats] = useState({
     views: 0,
@@ -64,26 +66,7 @@ export default function Sidebar({ total = 0 }) {
         <p className="text-dark-400 text-sm mb-4">
           {settings?.bio || '探索技术世界，分享编程经验'}
         </p>
-        <div className="flex justify-center gap-3">
-          {settings?.github && (
-            <a
-              href={settings.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2.5 rounded-xl bg-dark-800/80 text-dark-400 hover:text-gold hover:bg-gold/10 transition-all border border-dark-700/50"
-            >
-              <ExternalLink size={16} />
-            </a>
-          )}
-          {settings?.email && (
-            <a
-              href={`mailto:${settings.email}`}
-              className="p-2.5 rounded-xl bg-dark-800/80 text-dark-400 hover:text-gold hover:bg-gold/10 transition-all border border-dark-700/50"
-            >
-              <Mail size={16} />
-            </a>
-          )}
-        </div>
+        <ContactLinks settings={settings} />
       </div>
 
       <div className="glass-card p-5">

@@ -2,7 +2,8 @@ import { useLocation } from 'react-router-dom'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 
-export default function SearchBar({ onSearch, onComposingChange }) {
+/** 渲染支持输入法、防抖回调和弹层自动聚焦的搜索框。 */
+export default function SearchBar({ onSearch, onComposingChange, autoFocus = false }) {
   const location = useLocation()
   useEffect(() => {
     if (new URLSearchParams(location.search).get('focus') === 'search')
@@ -96,6 +97,7 @@ export default function SearchBar({ onSearch, onComposingChange }) {
         <Search size={18} className="text-dark-400 flex-shrink-0" />
         <input
           ref={inputRef}
+          autoFocus={autoFocus}
           type="text"
           placeholder="搜索文章... (按 / 聚焦)"
           value={query}

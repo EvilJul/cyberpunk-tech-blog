@@ -75,3 +75,6 @@ final-debug.js
 diagnose.sh
 public/diagnose.html
 public/test-*.html
+tmp-studio-shots.mjs
+tmp-studio-verify.mjs
+tmp-studio-a11y.mjs

@@ -7,7 +7,8 @@ import { useSettings } from '../../contexts/SettingsContext'
 import { Folder, X } from 'lucide-react'
 import { logger } from '../../utils/logger'
 
-export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
+/** 展示分页文章，支持路由筛选、组合筛选及弹层自动聚焦。 */
+export default function ArticleList({ onArticleClick, perPage = 10, onTotal, filterCategory, filterTag, showCategories = true, autoFocusSearch = false }) {
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -16,8 +17,8 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
   const [isComposing, setIsComposing] = useState(false)
   const { name } = useParams()
   const isTag = window.location.pathname.includes('/tag/')
-  const selectedCategory = isTag ? null : name
-  const selectedTag = isTag ? name : null
+  const selectedCategory = filterCategory ?? (isTag ? null : name)
+  const selectedTag = filterTag ?? (isTag ? name : null)
   const [pagination, setPagination] = useState({
     page: 1,
     per_page: perPage,
@@ -106,7 +107,8 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
     }
   }
 
-  useEffect(() => {
+  useEffect(/* 仅在列表自行展示分类时请求分类目录。 */ () => {
+    if (!showCategories) return
     logger.info('ArticleList 组件已挂载')
     // 获取分类
     apiFetch('/api/categories')
@@ -118,9 +120,9 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
       .catch((err) => {
         logger.error('获取分类失败', { error: err.message })
       })
-  }, [])
+  }, [showCategories])
 
-  useEffect(() => {
+  useEffect(/* 筛选条件变化后从第一页重新加载。 */ () => {
     fetchArticles(1)
   }, [debouncedSearchQuery, selectedCategory, selectedTag, perPage])
 
@@ -142,7 +144,7 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
 
   return (
     <div>
-      <SearchBar onSearch={setSearchQuery} onComposingChange={setIsComposing} />
+      <SearchBar autoFocus={autoFocusSearch} onSearch={setSearchQuery} onComposingChange={setIsComposing} />
 
       {searchQuery && (
         <div className="mb-4 text-sm text-dark-400">
@@ -151,7 +153,7 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
         </div>
       )}
 
-      <div className="mb-6">
+      {showCategories && <div className="mb-6">
         <div className="flex items-center gap-2 mb-3">
           <Folder size={16} className="text-gold" />
           <span className="text-sm font-medium text-white">按分类筛选</span>
@@ -183,13 +185,13 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal }) {
             </Link>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="space-y-4">
         {articles.length === 0 ? (
           <div className="glass-card p-8 text-center">
             <p className="text-dark-400">
-              {searchQuery || selectedCategory
+              {searchQuery || selectedCategory || selectedTag
                 ? '没有找到匹配的文章'
                 : '暂无文章'}
             </p>

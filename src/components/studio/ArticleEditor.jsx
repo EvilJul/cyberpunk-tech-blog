@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { studioApi, exportRecovery } from '../../utils/studioApi'
 import MarkdownContent from '../blog/MarkdownContent'
+import StudioPageHeader from './StudioPageHeader'
+import './editor-layout.css'
 const payloadFor = /* 整理文章提交字段并去重标签。 */ (form) => ({
   ...form,
   tags: [...new Set(form.tags.map(/* 去除标签首尾空白。 */ (tag) => tag.trim()).filter(Boolean))]
@@ -412,46 +414,82 @@ export default function ArticleEditor() {
       </section>
     )
   return (
-    <section>
-      <h1>{id ? '编辑文章' : '写文章'}</h1>
-      <p>
-        版本 {article?.revision || '尚未创建'} ·{' '}
-        {article?.status === 'published' ? '已发布' : '草稿'} ·{' '}
-        {dirty ? '未保存' : '无未保存修改'}
+    <section className={preview ? 'studio-editor studio-editor--preview' : 'studio-editor'}>
+      <div className="studio-editor-top">
+        <StudioPageHeader title={id ? '编辑文章' : '新建文章'} />
+        <div className="studio-actions studio-editor-actions">
+          <button disabled={busy} onClick={/* 执行当前按钮对应的管理操作。 */ () => run('save')}>
+            保存草稿
+          </button>
+          <button
+            className="studio-button--ghost"
+            onClick={/* 切换正文预览开关。 */ () => setPreview(/* 反转当前预览开关。 */ (p) => !p)}
+          >
+            {preview ? '关闭预览' : '预览'}
+          </button>
+          <button
+            className="studio-button--primary"
+            disabled={busy}
+            onClick={/* 执行当前按钮对应的管理操作。 */ () => run('publish')}
+          >
+            发布
+          </button>
+        </div>
+        <p className="studio-editor-save-hint">保存草稿只更新工作副本，发布才会改变公开站点。</p>
+      </div>
+
+      {/* 状态条：版本、公开状态与保存状态分别呈现，不只靠颜色区分。 */}
+      <div className="studio-editor-statusbar">
+        <span className={`studio-badge ${article?.status === 'published' ? 'studio-badge--ok' : 'studio-badge--muted'}`}>
+          {article?.status === 'published' ? '已发布' : '草稿'}
+        </span>
+        <span className="studio-editor-revision">版本 {article?.revision || '尚未创建'}</span>
+        {dirty ? (
+          <span className="studio-badge studio-badge--warn">未保存</span>
+        ) : (
+          <span className="studio-badge studio-badge--ok">无未保存修改</span>
+        )}
+        {busy && <span className="studio-badge studio-badge--muted" role="status">保存中…</span>}
+        {uploading && <span className="studio-badge studio-badge--muted" role="status">上传中，正文可继续编辑…</span>}
+      </div>
+      <p role="status" className="studio-editor-message">
+        {message}
       </p>
-      <p role="status">{message}</p>
+
       {recovery && (
-        <aside>
+        <aside className="studio-recovery">
+          <h2>本机恢复</h2>
           <p>
             发现本机恢复（{recovery.time}，版本 {recovery.revision || '新文章'}
             ），不会自动覆盖服务端。
           </p>
-          <button
-            onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
-              if (
-                confirm('确认恢复本机内容到编辑区？保存时仍检查服务端版本。')
-              ) {
-                sequence.current++
-                setForm(recovery.form)
-                setDirty(true)
-                dirtyRef.current = true
-                setRecovery(null)
-              }
-            }}
-          >
-            恢复到编辑区
-          </button>
-          <button onClick={/* 导出当前文章恢复副本。 */ () => exportRecovery(recovery)}>导出恢复</button>
-          <button
-            onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
-              if (confirm('确认丢弃这份本机恢复？')) {
-                localStorage.removeItem(key)
-                setRecovery(null)
-              }
-            }}
-          >
-            丢弃恢复
-          </button>
+          <div className="studio-actions">
+            <button
+              onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
+                if (confirm('确认恢复本机内容到编辑区？保存时仍检查服务端版本。')) {
+                  sequence.current++
+                  setForm(recovery.form)
+                  setDirty(true)
+                  dirtyRef.current = true
+                  setRecovery(null)
+                }
+              }}
+            >
+              恢复到编辑区
+            </button>
+            <button onClick={/* 导出当前文章恢复副本。 */ () => exportRecovery(recovery)}>导出恢复</button>
+            <button
+              className="studio-button--danger"
+              onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
+                if (confirm('确认丢弃这份本机恢复？')) {
+                  localStorage.removeItem(key)
+                  setRecovery(null)
+                }
+              }}
+            >
+              丢弃恢复
+            </button>
+          </div>
         </aside>
       )}
       {error && (
@@ -466,163 +504,197 @@ export default function ArticleEditor() {
           )}
         </p>
       )}
-      <div className="studio-fields">
-        {[
-          ['title', '标题'],
-          ['slug', '文章地址'],
-          ['author', '作者'],
-          ['excerpt', '摘要']
-        ].map(/* 将当前条目映射为展示内容。 */ ([name, label]) => (
-          <label key={name}>
-            {label}
+
+      <div className="studio-editor-body">
+        <div className="studio-editor-main">
+          <label className="studio-editor-title-label">
+            标题
             <input
-              value={form[name] || ''}
-              onChange={/* 更新当前文章基础字段。 */ (e) => change(name, e.target.value)}
+              value={form.title || ''}
+              onChange={/* 更新当前文章基础字段。 */ (e) => change('title', e.target.value)}
+              placeholder="给这篇文章一个标题"
             />
           </label>
-        ))}
-        <label>
-          分类
-          <input
-            list="studio-categories"
-            value={form.category || ''}
-            onChange={/* 更新文章分类。 */ (e) => change('category', e.target.value)}
-            placeholder="选择已有分类或输入新分类"
-          />
-          <datalist id="studio-categories">
-            {categories.map(/* 将当前条目映射为展示内容。 */ (category) => (
-              <option key={category.id} value={category.name} />
+
+          <div role="toolbar" aria-label="Markdown 工具栏" className="studio-editor-toolbar">
+            {[
+              [
+                '标题格式',
+                [
+                  ['H1', '# ', '', '标题'],
+                  ['H2', '## ', '', '标题'],
+                  ['H3', '### ', '', '标题']
+                ]
+              ],
+              [
+                '文本格式',
+                [
+                  ['加粗', '**', '**', '粗体'],
+                  ['斜体', '*', '*', '斜体'],
+                  ['删除线', '~~', '~~', '文字'],
+                  ['行内代码', '`', '`', '代码']
+                ]
+              ],
+              [
+                '插入内容',
+                [
+                  ['链接', '[', '](https://example.com)', '链接文字'],
+                  ['引用', '> ', '', '引用内容'],
+                  ['无序列表', '- ', '', '列表项'],
+                  ['有序列表', '1. ', '', '列表项'],
+                  ['代码块', '\n```\n', '\n```\n', '代码'],
+                  ['表格', '\n| 列一 | 列二 |\n| --- | --- |\n| ', ' | 内容 |\n', '内容'],
+                  ['分隔线', '\n---\n', '', '']
+                ]
+              ]
+            ].map(/* 按功能分组渲染工具栏按钮。 */ ([group, items]) => (
+              <div className="studio-editor-toolbar-group" role="group" aria-label={group} data-group-label={group} key={group}>
+                {items.map(/* 将当前条目映射为展示内容。 */ ([label, before, after, placeholder]) => (
+                  <button
+                    type="button"
+                    key={label}
+                    onClick={/* 标题作用于整行，其余格式作用于当前选区。 */ () => /^#{1,3} $/.test(before) ? insertHeading(before) : insert(before, after, placeholder)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             ))}
-          </datalist>
-        </label>
-        <label>
-          标签（逗号分隔）
-          <input
-            value={form.tags.join(',')}
-            onChange={/* 拆分逗号分隔的标签输入。 */ (e) => change('tags', e.target.value.split(/[,，]/))}
+          </div>
+
+          <label className="studio-editor-upload">
+            插入图片（上传后可公开访问）
+            <input
+              type="file"
+              multiple
+              disabled={uploading}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={/* 上传所选图片并重置文件输入。 */ (e) => {
+                const files = [...(e.target.files || [])]
+                e.target.value = ''
+                uploadFiles(files)
+              }}
+            />
+          </label>
+          <label htmlFor="studio-markdown-content">Markdown 正文</label>
+          <textarea
+            id="studio-markdown-content"
+            ref={textarea}
+            rows={24}
+            onKeyDown={/* 响应格式快捷键和保存快捷键。 */ (e) => {
+              if (!(e.ctrlKey || e.metaKey)) return
+              const key = e.key.toLowerCase()
+              if (['b', 'i', 'k', 's'].includes(key)) {
+                e.preventDefault()
+                if (key === 's') run('save')
+                else if (key === 'b') insert('**', '**')
+                else if (key === 'i') insert('*', '*')
+                else insert('[', '](https://example.com)')
+              }
+            }}
+            onPaste={/* 上传剪贴板图片并阻止默认粘贴。 */ (e) => {
+              const files = [...(e.clipboardData?.files || [])]
+              if (files.length) {
+                e.preventDefault()
+                uploadFiles(files)
+              }
+            }}
+            onDragOver={/* 允许将文件拖入正文区域。 */ (e) => {
+              if (e.dataTransfer.types.includes('Files')) e.preventDefault()
+            }}
+            onDrop={/* 上传拖放图片并阻止默认打开文件。 */ (e) => {
+              const files = [...e.dataTransfer.files]
+              if (files.length) {
+                e.preventDefault()
+                uploadFiles(files)
+              }
+            }}
+            value={form.content}
+            onChange={/* 更新正文并保留未保存标记。 */ (e) => change('content', e.target.value)}
           />
-        </label>
+          <p className="studio-muted-text">
+            支持 Ctrl/⌘ + B 加粗、I 斜体、K 链接、S 保存；可粘贴或拖放多张图片。
+          </p>
+        </div>
+
+        <details className="studio-editor-props" open>
+          <summary>文章属性</summary>
+          <div className="studio-editor-props-body">
+            <label>
+              文章地址
+              <input
+                value={form.slug || ''}
+                onChange={/* 更新当前文章基础字段。 */ (e) => change('slug', e.target.value)}
+              />
+            </label>
+            <label>
+              作者
+              <input
+                value={form.author || ''}
+                onChange={/* 更新当前文章基础字段。 */ (e) => change('author', e.target.value)}
+              />
+            </label>
+            <label>
+              摘要
+              <input
+                value={form.excerpt || ''}
+                onChange={/* 更新当前文章基础字段。 */ (e) => change('excerpt', e.target.value)}
+              />
+            </label>
+            <label>
+              分类
+              <input
+                list="studio-categories"
+                value={form.category || ''}
+                onChange={/* 更新文章分类。 */ (e) => change('category', e.target.value)}
+                placeholder="选择已有分类或输入新分类"
+              />
+              <datalist id="studio-categories">
+                {categories.map(/* 将当前条目映射为展示内容。 */ (category) => (
+                  <option key={category.id} value={category.name} />
+                ))}
+              </datalist>
+            </label>
+            <label>
+              标签（逗号分隔）
+              <input
+                value={form.tags.join(',')}
+                onChange={/* 拆分逗号分隔的标签输入。 */ (e) => change('tags', e.target.value.split(/[,，]/))}
+              />
+            </label>
+          </div>
+          <div className="studio-editor-secondary-actions">
+            {id && (
+              <button className="studio-button--ghost" disabled={busy} onClick={compare}>
+                比较最新版本
+              </button>
+            )}
+            <button className="studio-button--ghost" disabled={busy} onClick={copy}>
+              另存新草稿
+            </button>
+            <button
+              className="studio-button--ghost"
+              onClick={/* 导出当前文章恢复副本。 */ () => exportRecovery({ form, revision: article?.revision })}
+            >
+              导出恢复文件
+            </button>
+            <button
+              className="studio-button--danger"
+              disabled={busy || article?.status !== 'published'}
+              onClick={/* 执行当前按钮对应的管理操作。 */ () => run('unpublish')}
+            >
+              撤回
+            </button>
+          </div>
+
+        </details>
       </div>
-      <div role="toolbar" aria-label="Markdown 工具栏">
-        {[
-          ['H1', '# ', '', '标题'],
-          ['H2', '## ', '', '标题'],
-          ['H3', '### ', '', '标题'],
-          ['加粗', '**', '**', '粗体'],
-          ['斜体', '*', '*', '斜体'],
-          ['删除线', '~~', '~~', '文字'],
-          ['行内代码', '`', '`', '代码'],
-          ['链接', '[', '](https://example.com)', '链接文字'],
-          ['引用', '> ', '', '引用内容'],
-          ['无序列表', '- ', '', '列表项'],
-          ['有序列表', '1. ', '', '列表项'],
-          ['代码块', '\n```\n', '\n```\n', '代码'],
-          [
-            '表格',
-            '\n| 列一 | 列二 |\n| --- | --- |\n| ',
-            ' | 内容 |\n',
-            '内容'
-          ],
-          ['分隔线', '\n---\n', '', '']
-        ].map(/* 将当前条目映射为展示内容。 */ ([label, before, after, placeholder]) => (
-          <button
-            type="button"
-            key={label}
-            onClick={/* 标题作用于整行，其余格式作用于当前选区。 */ () => /^#{1,3} $/.test(before) ? insertHeading(before) : insert(before, after, placeholder)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <p>
-        支持 Ctrl/⌘ + B 加粗、I 斜体、K 链接、S 保存；可粘贴或拖放多张图片。
-      </p>
-      <label htmlFor="studio-markdown-content">Markdown 正文</label>
-        <textarea
-          id="studio-markdown-content"
-          ref={textarea}
-          rows={24}
-          onKeyDown={/* 响应格式快捷键和保存快捷键。 */ (e) => {
-            if (!(e.ctrlKey || e.metaKey)) return
-            const key = e.key.toLowerCase()
-            if (['b', 'i', 'k', 's'].includes(key)) {
-              e.preventDefault()
-              if (key === 's') run('save')
-              else if (key === 'b') insert('**', '**')
-              else if (key === 'i') insert('*', '*')
-              else insert('[', '](https://example.com)')
-            }
-          }}
-          onPaste={/* 上传剪贴板图片并阻止默认粘贴。 */ (e) => {
-            const files = [...(e.clipboardData?.files || [])]
-            if (files.length) {
-              e.preventDefault()
-              uploadFiles(files)
-            }
-          }}
-          onDragOver={/* 允许将文件拖入正文区域。 */ (e) => {
-            if (e.dataTransfer.types.includes('Files')) e.preventDefault()
-          }}
-          onDrop={/* 上传拖放图片并阻止默认打开文件。 */ (e) => {
-            const files = [...e.dataTransfer.files]
-            if (files.length) {
-              e.preventDefault()
-              uploadFiles(files)
-            }
-          }}
-          value={form.content}
-          onChange={/* 更新正文并保留未保存标记。 */ (e) => change('content', e.target.value)}
-        />
-      <label>
-        插入图片（上传后可公开访问）
-        <input
-          type="file"
-          multiple
-          disabled={uploading}
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={/* 上传所选图片并重置文件输入。 */ (e) => {
-            const files = [...(e.target.files || [])]
-            e.target.value = ''
-            uploadFiles(files)
-          }}
-        />
-      </label>
-      {uploading && <p role="status">正在上传图片，正文可继续编辑…</p>}
-      <div className="studio-actions">
-        <button disabled={busy} onClick={/* 执行当前按钮对应的管理操作。 */ () => run('save')}>
-          保存草稿
-        </button>
-        <button disabled={busy} onClick={/* 执行当前按钮对应的管理操作。 */ () => run('publish')}>
-          发布
-        </button>
-        <button
-          disabled={busy || article?.status !== 'published'}
-          onClick={/* 执行当前按钮对应的管理操作。 */ () => run('unpublish')}
-        >
-          撤回
-        </button>
-        <button onClick={/* 切换正文预览开关。 */ () => setPreview(/* 反转当前预览开关。 */ (p) => !p)}>
-          {preview ? '关闭预览' : '预览'}
-        </button>
-        <button
-          onClick={/* 导出当前文章恢复副本。 */ () => exportRecovery({ form, revision: article?.revision })}
-        >
-          导出恢复文件
-        </button>
-        {id && (
-          <button disabled={busy} onClick={compare}>
-            比较最新版本
-          </button>
-        )}
-        <button disabled={busy} onClick={copy}>
-          另存新草稿
-        </button>
-      </div>
+
       {comparison &&
         (comparison.isCopy ? (
           <Link to={`/studio/editor/${comparison.id}`}>打开另存的草稿</Link>
         ) : (
-          <aside>
+          <aside className="studio-compare">
             <h2>服务端最新版本 {comparison.revision}</h2>
             <pre>{JSON.stringify(editable(comparison), null, 2)}</pre>
             <button onClick={reload}>重载服务端版本</button>

@@ -69,8 +69,8 @@ test('真实 /blog/ 作者链路保留部署前缀、会话边界与显式发布
   assert.equal(identity.user.username, username)
   assert.ok(identity.csrfToken)
 
-  await page.getByRole('navigation', { name: '作者工作区' }).getByRole('link', { name: '写文章', exact: true }).click()
-  await page.getByRole('heading', { name: '写文章', exact: true }).waitFor()
+  await page.getByRole('navigation', { name: '作者工作区' }).getByRole('link', { name: '新建文章', exact: true }).click()
+  await page.getByRole('heading', { name: '新建文章', exact: true }).waitFor()
   await page.getByLabel('标题', { exact: true }).fill('子路径真实作者验收')
   await page.getByLabel('文章地址', { exact: true }).fill('author-subpath-fixture')
   await page.getByLabel('Markdown 正文').fill('# 子路径正文\n\n先保存草稿，再显式发布。')

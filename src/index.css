@@ -324,22 +324,76 @@ body::after {
   color: var(--theme-text-primary);
   border-color: var(--theme-border);
 }
-.site-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  padding: 1rem 5%;
-  border-bottom: 1px solid var(--theme-border);
+/* 桌面侧边悬浮导航让出页面顶部，窄屏改为底部触达。 */
+.reader-dock {
+  position: fixed;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  width: 72px;
+  padding: 10px 7px;
+  border: 1px solid var(--theme-border);
+  border-radius: 24px;
   background: var(--theme-surface);
+  box-shadow: 0 12px 40px #0003;
+  backdrop-filter: blur(20px);
 }
-.site-header nav {
+.dock-brand {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: 2px auto 14px;
+  border-radius: 14px;
+  background: var(--theme-primary);
+  color: var(--theme-background, #111);
+  font-size: 18px;
+  font-weight: 800;
+}
+.reader-dock nav, .dock-tools { display: flex; flex-direction: column; gap: 4px; }
+.dock-tools { border-top: 1px solid var(--theme-border); margin-top: 10px; padding-top: 10px; }
+.dock-link {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-inline-end: auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 54px;
+  border-radius: 15px;
+  color: var(--theme-text-secondary);
+  font-size: 11px;
+  transition: color .18s, background .18s;
 }
-.site-header .active,
+.reader-dock .dock-link:hover, .reader-dock .dock-link.active {
+  color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  text-decoration: none;
+}
+.reader-main { padding-top: 3rem; }
+@media (min-width: 761px) and (max-width: 1399px) {
+  .reader-main { margin-left: 112px; margin-right: 24px; }
+}
+@media (max-width: 760px) {
+  .reader-dock {
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    width: auto;
+    transform: none;
+    display: flex;
+    padding: 6px;
+    border-radius: 22px;
+  }
+  .dock-brand { display: none; }
+  .reader-dock nav, .dock-tools { flex-direction: row; gap: 2px; }
+  .reader-dock nav { flex: 4; }
+  .dock-tools { flex: 2; margin: 0 0 0 4px; padding: 0 0 0 4px; border-top: 0; border-left: 1px solid var(--theme-border); }
+  .dock-link { flex: 1; min-width: 0; min-height: 52px; font-size: 10px; }
+  .reader-main { padding-top: 24px; padding-bottom: 100px; }
+  body:has(.reader-dock) { padding-bottom: 80px; }
+}
 a:hover,
 .toc [aria-current] {
   color: var(--theme-primary);
@@ -602,3 +656,56 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* 探索页聚焦筛选与结果，使用一块稳定阅读表面降低背景干扰。 */
+.explore-page { position: relative; z-index: 3; max-width: 960px; margin-inline: auto; padding: 32px; border: 1px solid var(--theme-border); border-radius: 20px; background: var(--theme-surface); }
+.explore-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-bottom: 24px; }
+.explore-heading h1 { margin: 0 0 8px; font-size: 28px; }
+.explore-heading p { color: var(--theme-text-secondary); font-size: 14px; line-height: 1.7; }
+.explore-reset { color: var(--theme-primary); font-size: 13px; white-space: nowrap; }
+.explore-filters { padding-block: 20px; border-block: 1px solid var(--theme-border); margin-bottom: 24px; }
+.explore-filter-row { display: flex; align-items: baseline; gap: 20px; }
+.explore-filter-row + .explore-filter-row { margin-top: 14px; }
+.explore-filter-label { flex-shrink: 0; font-size: 13px; color: var(--theme-text-secondary); }
+.explore-options { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.explore-options a { display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; color: var(--theme-text-secondary); overflow-wrap: anywhere; max-width: 100%; }
+.explore-options a.selected, .explore-options a:hover { background: color-mix(in srgb, var(--theme-primary) 14%, transparent); color: var(--theme-primary); text-decoration: none; }
+.explore-options small { font-size: 10px; opacity: .7; }
+.explore-unknown { font-size: 12px; color: var(--theme-text-secondary); padding: 6px; overflow-wrap: anywhere; }
+.explore-filters button { color: var(--theme-primary); margin-left: 8px; }
+.explore-results .glass-card { box-shadow: none; }
+@media (max-width: 600px) {
+  .explore-page { padding: 20px 16px; border-radius: 16px; }
+  .explore-heading { align-items: flex-start; gap: 12px; }
+  .explore-heading h1 { font-size: 24px; }
+  .explore-heading p { font-size: 12px; }
+  .explore-filter-row { gap: 10px; }
+  .explore-options { gap: 4px; }
+  .explore-options a { padding: 6px 9px; }
+}
+
+/* 搜索弹层独立滚动，背景文章保持原有阅读位置。 */
+.reader-search { margin: auto; width: min(760px, calc(100% - 32px)); max-height: 85dvh; padding: 24px; border: 1px solid var(--theme-border); border-radius: 20px; background: var(--theme-surface); color: var(--theme-text-primary); overflow: auto; overscroll-behavior: contain; }
+.reader-search::backdrop { background: #070911b8; backdrop-filter: blur(8px); }
+.reader-search-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.reader-search-heading h2 { font-size: 20px; font-weight: 700; }
+.reader-search-heading button { color: var(--theme-text-secondary); font-size: 13px; padding: 8px; }
+.dock-tools > button { width: 100%; }
+@media (max-width: 600px) { .reader-search { padding: 16px; } }
+
+/* 联系账号：灰显未配置项，有效配置后点亮；公众号以原生模态框展示。 */
+.reader-contacts { display: flex; justify-content: center; gap: 12px; }
+.reader-contact { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--theme-border); border-radius: 12px; color: var(--theme-text-secondary); opacity: .35; }
+.reader-contact.is-enabled { opacity: 1; color: var(--theme-primary); background: color-mix(in srgb, var(--theme-primary) 10%, transparent); cursor: pointer; }
+.reader-contact--wechat.is-enabled { color: #36cf83; background: #36cf8314; }
+.reader-contact.is-enabled:hover { border-color: currentColor; text-decoration: none; }
+.reader-wechat-dialog { margin: auto; width: min(380px, calc(100% - 32px)); max-height: 85dvh; overflow: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 20px; background: var(--theme-surface); color: var(--theme-text-primary); text-align: center; }
+.reader-wechat-dialog::backdrop { background: #060911b8; backdrop-filter: blur(8px); }
+.reader-wechat-dialog header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.reader-wechat-dialog h2 { font-size: 18px; font-weight: 700; }
+.reader-wechat-dialog header button { display: grid; place-items: center; min-width: 36px; min-height: 36px; }
+.reader-wechat-dialog .reader-wechat-name { font-size: 20px; font-weight: 600; margin-bottom: 16px; overflow-wrap: anywhere; }
+.reader-wechat-dialog img { display: block; width: 220px; max-width: 100%; margin: 0 auto 16px; background: white; border-radius: 10px; }
+.reader-wechat-dialog p { overflow-wrap: anywhere; margin-block: 12px; }
+.reader-wechat-hint { color: var(--theme-text-secondary); font-size: 13px; }
+.reader-wechat-copy { padding: 8px 16px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-primary); }

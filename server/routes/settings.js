@@ -78,6 +78,9 @@ const defaultSettings = {
   bio: '探索技术世界，分享编程经验',
   github: '',
   email: '',
+  wechatName: '',
+  wechatId: '',
+  wechatQr: '',
   theme: defaultTheme
 }
 

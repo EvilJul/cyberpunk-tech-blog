@@ -152,8 +152,8 @@ test(
       await page.getByLabel('名称', { exact: true }).fill('验收分类')
       await page.getByRole('button', { name: '新增分类', exact: true }).click()
       await page.getByText('操作成功', { exact: true }).waitFor()
-      await page.getByRole('link', { name: '写文章', exact: true }).click()
-      await page.getByRole('heading', { name: '写文章', exact: true }).waitFor()
+      await page.getByRole('link', { name: '新建文章', exact: true }).click()
+      await page.getByRole('heading', { name: '新建文章', exact: true }).waitFor()
       await page
         .getByLabel('标题', { exact: true })
         .fill('真实后端作者验收文章')
@@ -340,7 +340,7 @@ test(
       const searchResult = await (await searched).json()
       assert.equal(searchResult.data.length, 1)
       assert.equal(searchResult.data[0].id, draft.id)
-      await page.getByText(/分类：验收分类/).waitFor()
+      await page.getByText(/分类：\s*验收分类/).waitFor()
       await page.getByText(/发布时间：/).waitFor()
       await screenshot('09-article-search-metadata')
       evidence.steps.push(

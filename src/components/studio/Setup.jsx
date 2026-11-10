@@ -14,7 +14,7 @@ export default function Setup() {
       .catch(/* 更新错误提示。 */ (e) => setError(e.message))
   }, [])
   return (
-    <main className="studio">
+    <main className="studio studio--auth">
       <h1>首次安装</h1>
       <p>
         请在服务器本机运行 node scripts/create-setup-token.js

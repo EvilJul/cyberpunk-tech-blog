@@ -196,12 +196,13 @@ test('production browser acceptance: navigation, reading, moderation and request
     const publicComments = await (await fetch(`${base}/api/comments/acceptance-0`)).json()
     assert.ok(publicComments.every(c => c.status === 'approved'))
   })
-  await check('desktop/mobile dark/light reading screenshots and horizontal overflow', async () => {
+  await check('desktop/mobile configured theme reading screenshots and horizontal overflow', /* 验证配置主题与移除切换入口后的响应式阅读。 */ async () => {
     for (const [size, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844]]) {
       await page.setViewportSize({ width, height })
-      for (const [theme, label, id] of [['light', '浅色', 'minimal'], ['dark', '深色', 'cyberpunk']]) {
-        await page.getByRole('button', { name: label, exact: true }).click()
-        await expect(page.locator('html')).toHaveAttribute('data-theme', id)
+      for (const theme of ['configured']) {
+        await expect(page.getByRole('button', { name: '浅色', exact: true })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: '深色', exact: true })).toHaveCount(0)
+        await expect(page.locator('.reader-dock')).toBeVisible()
         await page.evaluate(() => window.scrollTo(0, 0))
         await page.evaluate(() => document.fonts.ready)
         const filename = `${size}-${theme}.png`
@@ -225,6 +226,91 @@ test('production browser acceptance: navigation, reading, moderation and request
 
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${size}/${theme} must not overflow horizontally`)
       }
+    }
+  })
+  await check('article search stays in place and restores reading position', /* 验证详情页模态搜索、键盘关闭及结果跳转。 */ async () => {
+    await page.goto(`${base}/article/acceptance-0`)
+    await expect(page.locator('.markdown-body')).toBeVisible()
+    await page.evaluate(/* 设置阅读位置以验证打开关闭搜索不滚动正文。 */ () => window.scrollTo(0, 300))
+    const position = await page.evaluate(/* 记录弹层打开前的阅读位置。 */ () => window.scrollY)
+    const trigger = page.locator('.dock-tools').getByRole('button', { name: '搜索', exact: true })
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: '搜索文章', exact: true })
+    const input = dialog.getByPlaceholder('搜索文章... (按 / 聚焦)')
+    await expect(input).toBeFocused()
+    await expect(page).toHaveURL(`${base}/article/acceptance-0`)
+    const searched = page.waitForResponse(/* 等待实际搜索响应，避免关闭时中断请求。 */ (response) => new URL(response.url()).searchParams.get('search') === '验收列表文章 1')
+    await input.fill('验收列表文章 1')
+    assert.equal((await searched).status(), 200)
+    await expect(dialog.getByRole('link', { name: '验收列表文章 1', exact: true })).toBeVisible()
+    await page.screenshot({ path: join(artifacts, 'article-search.png'), animations: 'disabled' })
+    await dialog.getByRole('button', { name: '关闭搜索', exact: true }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    assert.equal(await page.evaluate(/* 核对关闭搜索后的阅读位置。 */ () => window.scrollY), position)
+    await trigger.click()
+    await expect(input).toBeFocused()
+    await input.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await trigger.click()
+    await expect(dialog.getByRole('link', { name: '验收列表文章 1', exact: true })).toBeVisible()
+    await dialog.getByRole('link', { name: '验收列表文章 1', exact: true }).click()
+    await expect(page).toHaveURL(`${base}/article/acceptance-1`)
+    await expect(dialog).toHaveCount(0)
+  })
+  await check('unified explore filters, legacy URLs and responsive results', /* 验证统一入口、组合筛选及浏览历史中的状态恢复。 */ async () => {
+    for (const legacy of ['categories', 'tags']) {
+      await page.goto(`${base}/${legacy}`)
+      await expect(page).toHaveURL(`${base}/explore`)
+      await expect(page.getByRole('heading', { name: '探索文章', exact: true })).toBeVisible()
+    }
+    const categories = page.getByRole('group', { name: '分类', exact: true })
+    const tags = page.getByRole('group', { name: '标签', exact: true })
+    await categories.getByRole('link', { name: /阅读分类\s*12/, exact: true }).click()
+    const combinedResponse = page.waitForResponse(/* 等待实际双条件请求，避免误读上一轮分类结果。 */ (response) => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/articles' && url.searchParams.has('category') && url.searchParams.has('tag')
+    })
+    await tags.getByRole('link', { name: /# 验收标签\s*12/, exact: true }).click()
+    assert.equal((await combinedResponse).status(), 200)
+    await expect(page).toHaveURL(/category=.*&tag=/)
+    await expect(page.locator('.explore-results').getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
+    const request = requests.filter(/* 取最新的文章请求以核对双重筛选参数。 */ (r) => r.path === '/api/articles').at(-1)
+    assert.match(request.query, /category=/)
+    assert.match(request.query, /tag=/)
+    const search = page.getByPlaceholder('搜索文章... (按 / 聚焦)')
+    const searchedResponse = page.waitForResponse(/* 等待防抖搜索完成后再刷新，避免页面卸载中断请求。 */ (response) => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/articles' && url.searchParams.get('search') === '完整阅读'
+    })
+    await search.fill('完整阅读')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await page.locator('.dock-tools').getByRole('link', { name: '搜索', exact: true }).click()
+      await expect(search).toBeFocused()
+      await expect(search).toHaveValue('完整阅读')
+      const current = new URL(page.url())
+      assert.equal(current.pathname, '/explore')
+      assert.equal(current.searchParams.get('category'), '阅读分类')
+      assert.equal(current.searchParams.get('tag'), '验收标签')
+      assert.equal(current.searchParams.get('focus'), 'search')
+    }
+    assert.equal((await searchedResponse).status(), 200)
+    await expect(page.locator('.explore-results').getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
+    await page.reload()
+    await expect(search).toBeFocused()
+    await expect(categories.locator('[aria-current="true"]')).toContainText('阅读分类')
+    await expect(tags.locator('[aria-current="true"]')).toContainText('验收标签')
+    await page.getByRole('link', { name: '清除筛选', exact: true }).click()
+    await expect(page).toHaveURL(`${base}/explore`)
+    await page.goBack()
+    await expect(tags.locator('[aria-current="true"]')).toContainText('验收标签')
+    await page.goForward()
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.locator('.explore-results').getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
+      const overflow = await page.evaluate(/* 确认窄屏筛选项和文章卡片没有横向溢出。 */ () => document.documentElement.scrollWidth > innerWidth)
+      assert.equal(overflow, false)
+      await page.screenshot({ path: join(artifacts, `explore-${width}.png`), fullPage: true, animations: 'disabled' })
     }
   })
   await check('no runtime, console, CORS or CSP errors during normal flows', async () => {

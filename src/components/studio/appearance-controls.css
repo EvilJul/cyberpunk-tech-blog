@@ -1,0 +1,88 @@
+.studio .studio-appearance-control.studio-appearance-control {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--studio-border, #cbd5e1);
+  border-radius: 10px;
+  background: var(--studio-surface, #fff);
+  color: var(--studio-text, #263244);
+}
+.studio .studio-appearance-control.studio-appearance-control label {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  min-width: 0;
+}
+.studio .studio-appearance-control.studio-appearance-control :is(select, input:not([type='checkbox'])) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.studio .studio-appearance-control.studio-appearance-control input[type='range'] {
+  padding: 0;
+  min-height: 28px;
+  accent-color: var(--studio-accent, #85bcff);
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.studio .studio-appearance-control.studio-appearance-control input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--studio-accent, #85bcff);
+}
+.studio .studio-appearance-control.studio-appearance-control :is(.studio-appearance-help, small) {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--studio-muted, #a5b2c3);
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-value {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-advanced summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-advanced[open] label {
+  margin: 0.5rem 0;
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-font {
+  padding: 0.8rem;
+  background: #f1f5f9;
+  color: #263244;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-radius-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.studio .studio-appearance-control.studio-appearance-control .studio-appearance-radius {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  min-height: 52px;
+  padding: 0.5rem;
+  background: #e5effa;
+  border: 2px solid #648bb5;
+  color: #263244;
+}
+.studio .studio-appearance-control.studio-appearance-control :is(input, select, button):disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.studio .studio-appearance-control.studio-appearance-control :is(input, select, button, summary):focus-visible {
+  outline: 2px solid var(--studio-accent, #85bcff);
+  outline-offset: 3px;
+}

@@ -1,0 +1,189 @@
+/* 编辑器独立作用域：明确覆盖工作台通用元素与旧编辑器规则。 */
+.studio .studio-editor {
+  min-width: 0;
+  width: 100%;
+}
+
+.studio .studio-editor .studio-editor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  background: var(--studio-bg, #111318);
+}
+
+.studio .studio-editor .studio-page-header {
+  position: static;
+  display: block;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+.studio .studio-editor .studio-page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.4;
+}
+
+.studio .studio-editor .studio-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio .studio-editor .studio-editor-save-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--studio-muted);
+  font-size: 13px;
+}
+
+.studio .studio-editor .studio-editor-statusbar { gap: 8px; }
+.studio .studio-editor .studio-editor-message { margin: 0 0 12px; }
+.studio .studio-editor .studio-editor-message:empty { display: none; }
+
+.studio .studio-editor .studio-editor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.studio .studio-editor .studio-editor-main { min-width: 0; }
+.studio .studio-editor label {
+  display: block;
+  width: auto;
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.studio .studio-editor .studio-editor-title-label input {
+  margin-top: 6px;
+  min-height: 48px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* 各组保持语义，外观统一为连续工具条，去掉占位的组标题和大卡片。 */
+.studio .studio-editor .studio-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 0 10px;
+  padding: 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface);
+}
+
+.studio .studio-editor .studio-editor-toolbar-group {
+  display: contents;
+}
+.studio .studio-editor .studio-editor-toolbar-group::before { content: none; }
+.studio .studio-editor .studio-editor-toolbar-group button {
+  min-height: 36px;
+  padding: 4px 8px;
+  margin: 0;
+  color: var(--studio-text);
+}
+
+.studio .studio-editor .studio-editor-upload {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--studio-muted);
+}
+.studio .studio-editor .studio-editor-upload input[type='file'] {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 4px;
+  font-size: 12px;
+}
+
+.studio .studio-editor #studio-markdown-content {
+  display: block;
+  width: 100%;
+  min-height: 440px;
+  margin: 0;
+  padding: 16px;
+  resize: vertical;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 15px;
+  line-height: 1.8;
+  scroll-margin-top: 16px;
+}
+
+.studio .studio-editor .studio-editor-props {
+  position: static;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface);
+}
+.studio .studio-editor .studio-editor-props-body { padding: 14px; }
+.studio .studio-editor .studio-editor-props-body label:last-child { margin: 0; }
+.studio .studio-editor .studio-editor-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid var(--studio-border);
+}
+
+/* 恢复与冲突是文档提示，不继承导航侧栏的位置、尺寸和滚动限制。 */
+.studio .studio-editor aside.studio-recovery,
+.studio .studio-editor aside.studio-compare {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface);
+}
+.studio .studio-editor aside.studio-recovery { border-color: var(--studio-warning, #efc27d); }
+.studio .studio-editor .studio-preview {
+  min-width: 0;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1199px) {
+  .studio .studio-editor .studio-editor-body { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .studio .studio-editor .studio-editor-top { gap: 10px; }
+  .studio .studio-editor .studio-editor-actions { width: 100%; }
+  .studio .studio-editor .studio-editor-actions button { flex: 1; }
+  .studio .studio-editor .studio-editor-toolbar-group button,
+  .studio .studio-editor .studio-editor-actions button { min-height: 44px; }
+  .studio .studio-editor #studio-markdown-content { min-height: 360px; padding: 12px; }
+  .studio .studio-editor.studio-editor--preview .studio-editor-body { display: none; }
+}

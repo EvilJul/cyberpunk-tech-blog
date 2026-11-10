@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { studioApi } from '../../utils/studioApi'
+import StudioPageHeader from './StudioPageHeader'
 const root = '/api/studio/integrations'
 const scopes = {
   'articles:read': '读取自己创建的文章',
@@ -91,17 +92,16 @@ export default function IntegrationsPage() {
   }
   return (
     <section>
-      <h1>发布集成</h1>
-      <p>
-        为中台创建独立凭据。建议仅选择必需权限，密钥不可管理账号或全站设置。发布
-        API 未启用时不能创建密钥。
-      </p>
+      <StudioPageHeader
+        title="发布集成"
+        description="为中台创建独立凭据。建议仅选择必需权限，密钥不可管理账号或全站设置。发布 API 未启用时不能创建密钥。"
+      />
       {!publishingEnabled && (
         <p role="status">发布集成尚未启用。请联系管理员配置启用后创建密钥。</p>
       )}
       <p role="status">{message}</p>
       {secret && (
-        <aside role="alert">
+        <aside role="alert" className="studio-secret">
           <h2>密钥仅展示这一次</h2>
           <p>请立即复制到调用方的安全配置中。关闭后无法再次查看。</p>
           <textarea
@@ -110,22 +110,25 @@ export default function IntegrationsPage() {
             value={secret}
             onFocus={/* 选中只读内容以便手动复制。 */ (e) => e.target.select()}
           />
-          <button
-            onClick={/* 复制当前内容并反馈剪贴板失败。 */ async () => {
-              try {
-                await navigator.clipboard.writeText(secret)
-                setMessage('已复制密钥')
-              } catch {
-                setMessage('请选中密钥手动复制')
-              }
-            }}
-          >
-            复制密钥
-          </button>
-          <button onClick={/* 更新一次性密钥展示。 */ () => setSecret(null)}>已妥善保存，关闭</button>
+          <div className="studio-actions">
+            <button
+              onClick={/* 复制当前内容并反馈剪贴板失败。 */ async () => {
+                try {
+                  await navigator.clipboard.writeText(secret)
+                  setMessage('已复制密钥')
+                } catch {
+                  setMessage('请选中密钥手动复制')
+                }
+              }}
+            >
+              复制密钥
+            </button>
+            <button onClick={/* 更新一次性密钥展示。 */ () => setSecret(null)}>已妥善保存，关闭</button>
+          </div>
         </aside>
       )}
       <form
+        className="studio-manage-form"
         onSubmit={/* 创建集成并选中新建记录。 */ (e) => {
           e.preventDefault()
           run(/* 提交当前管理请求并更新操作结果。 */ async () => {
@@ -136,61 +139,71 @@ export default function IntegrationsPage() {
           })
         }}
       >
-        <label>
-          集成名称
-          <input
-            required
-            maxLength={80}
-            value={name}
-            onChange={/* 更新待创建集成的名称。 */ (e) => setName(e.target.value)}
-          />
-        </label>
-        <button disabled={busy || !publishingEnabled}>创建集成</button>
+        <h2 className="studio-manage-form-title">新建集成</h2>
+        <div className="studio-fields">
+          <label>
+            集成名称
+            <input
+              required
+              maxLength={80}
+              value={name}
+              onChange={/* 更新待创建集成的名称。 */ (e) => setName(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="studio-actions">
+          <button disabled={busy || !publishingEnabled}>创建集成</button>
+        </div>
       </form>
-      <label htmlFor="studio-integration-select">选择集成</label>
-      <select
-        id="studio-integration-select"
-        value={selected}
-        onChange={/* 关闭明文密钥并清除内存展示。 */ (e) => {
-          setSelected(e.target.value)
-          setPage(1)
-          setSecret(null)
-        }}
-      >
-        <option value="">请选择</option>
-        {items.map(/* 将当前条目映射为展示内容。 */ (item) => (
-          <option key={item.id} value={item.id}>
-            {item.name}
-            {item.enabled ? '' : '（已禁用）'}
-          </option>
-        ))}
-      </select>
+      <fieldset>
+        <legend>集成信息</legend>
+        <label htmlFor="studio-integration-select">选择集成</label>
+        <select
+          id="studio-integration-select"
+          value={selected}
+          onChange={/* 关闭明文密钥并清除内存展示。 */ (e) => {
+            setSelected(e.target.value)
+            setPage(1)
+            setSecret(null)
+          }}
+        >
+          <option value="">请选择</option>
+          {items.map(/* 将当前条目映射为展示内容。 */ (item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+              {item.enabled ? '' : '（已禁用）'}
+            </option>
+          ))}
+        </select>
+      </fieldset>
       {selected && (
         <>
           <p>
             来源命名空间：<code>{selected}</code>。轮换不会更改来源或文章归属。
           </p>
-          <button
-            disabled={busy}
-            onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
-              const current = items.find(/* 查找当前标识对应的条目。 */ (item) => item.id === selected)
-              if (
-                window.confirm(
-                  `${current.enabled ? '禁用后所有密钥立即停止访问' : '重新启用此集成'}？`
+          <div className="studio-actions">
+            <button
+              disabled={busy}
+              onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
+                const current = items.find(/* 查找当前标识对应的条目。 */ (item) => item.id === selected)
+                if (
+                  window.confirm(
+                    `${current.enabled ? '禁用后所有密钥立即停止访问' : '重新启用此集成'}？`
+                  )
                 )
-              )
-                run(/* 提交当前管理请求并更新操作结果。 */ () =>
-                  studioApi(`${root}/${selected}`, {
-                    method: 'PATCH',
-                    body: { enabled: !current.enabled }
-                  })
-                )
-            }}
-          >
-            {items.find(/* 查找当前标识对应的条目。 */ (item) => item.id === selected)?.enabled
-              ? '禁用集成'
-              : '启用集成'}
-          </button>
+                  run(/* 提交当前管理请求并更新操作结果。 */ () =>
+                    studioApi(`${root}/${selected}`, {
+                      method: 'PATCH',
+                      body: { enabled: !current.enabled }
+                    })
+                  )
+              }}
+            >
+              {items.find(/* 查找当前标识对应的条目。 */ (item) => item.id === selected)?.enabled
+                ? '禁用集成'
+                : '启用集成'}
+            </button>
+          </div>
           <fieldset>
             <legend>新密钥权限（默认无权限）</legend>
             {Object.entries(scopes).map(/* 将当前条目映射为展示内容。 */ ([key, description]) => (
@@ -219,146 +232,161 @@ export default function IntegrationsPage() {
                 onChange={/* 更新密钥有效天数。 */ (e) => setDays(Number(e.target.value))}
               />
             </label>
-            <button
-              disabled={busy || !!secret || !publishingEnabled}
-              onClick={/* 提交当前管理请求并更新操作结果。 */ () =>
-                run(/* 提交当前管理请求并更新操作结果。 */ async () =>
-                  once(
-                    (
-                      await post(`${root}/${selected}/keys`, {
-                        scopes: grants,
-                        expires_in_days: days
-                      })
-                    ).data
-                  )
-                )
-              }
-            >
-              创建密钥
-            </button>
-          </fieldset>
-          <h2>现有密钥</h2>
-          <label>
-            轮换重叠小时（默认立即撤销旧密钥，最多24小时）
-            <input
-              type="number"
-              min={0}
-              max={24}
-              value={overlap}
-              onChange={/* 更新轮换重叠小时。 */ (e) => setOverlap(Number(e.target.value))}
-            />
-          </label>
-          <ul>
-            {keys.map(/* 将当前条目映射为展示内容。 */ (key) => (
-              <li key={key.key_id}>
-                <code>{key.key_id}</code>
-                <p>
-                  权限：{key.scopes.join('、') || '无'}；到期：
-                  {date(key.expires_at)}；上次使用：{date(key.last_used_at)}
-                  ；状态：
-                  {key.revoked_at
-                    ? '已撤销'
-                    : key.expires_at <= Date.now()
-                      ? '已过期'
-                      : '有效'}
-                </p>
-                <button
-                  disabled={
-                    busy ||
-                    !!secret ||
-                    !publishingEnabled ||
-                    !!key.revoked_at ||
-                    key.expires_at <= Date.now()
-                  }
-                  onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
-                    if (
-                      window.confirm(
-                        '轮换此密钥？保留原权限，旧密钥按指定重叠时间失效。'
-                      )
+            <div className="studio-actions">
+              <button
+                disabled={busy || !!secret || !publishingEnabled}
+                onClick={/* 提交当前管理请求并更新操作结果。 */ () =>
+                  run(/* 提交当前管理请求并更新操作结果。 */ async () =>
+                    once(
+                      (
+                        await post(`${root}/${selected}/keys`, {
+                          scopes: grants,
+                          expires_in_days: days
+                        })
+                      ).data
                     )
-                      run(/* 提交当前管理请求并更新操作结果。 */ async () =>
-                        once(
-                          (
-                            await post(
-                              `${root}/${selected}/keys/${key.key_id}/rotate`,
-                              {
-                                scopes: key.scopes,
-                                expires_in_days: days,
-                                overlap_hours: overlap
-                              }
-                            )
-                          ).data
+                  )
+                }
+              >
+                创建密钥
+              </button>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>现有密钥</legend>
+            <label>
+              轮换重叠小时（默认立即撤销旧密钥，最多24小时）
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={overlap}
+                onChange={/* 更新轮换重叠小时。 */ (e) => setOverlap(Number(e.target.value))}
+              />
+            </label>
+            <ul>
+              {keys.map(/* 将当前条目映射为展示内容。 */ (key) => (
+                <li key={key.key_id}>
+                  <code>{key.key_id}</code>
+                  <p>
+                    权限：{key.scopes.join('、') || '无'}；到期：
+                    {date(key.expires_at)}；上次使用：{date(key.last_used_at)}
+                    ；状态：
+                    {key.revoked_at
+                      ? '已撤销'
+                      : key.expires_at <= Date.now()
+                        ? '已过期'
+                        : '有效'}
+                  </p>
+                  <div className="studio-actions">
+                    <button
+                      disabled={
+                        busy ||
+                        !!secret ||
+                        !publishingEnabled ||
+                        !!key.revoked_at ||
+                        key.expires_at <= Date.now()
+                      }
+                      onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
+                        if (
+                          window.confirm(
+                            '轮换此密钥？保留原权限，旧密钥按指定重叠时间失效。'
+                          )
                         )
-                      )
-                  }}
-                >
-                  轮换（保留原权限）
-                </button>
-                <button
-                  disabled={busy || !!key.revoked_at}
-                  onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
-                    if (window.confirm('立即撤销此密钥？调用方需更新配置。'))
-                      run(/* 提交当前管理请求并更新操作结果。 */ () =>
-                        post(`${root}/${selected}/keys/${key.key_id}/revoke`)
-                      )
-                  }}
-                >
-                  立即撤销
-                </button>
-              </li>
-            ))}
-          </ul>
-          <h2>接入说明</h2>
-          <p>
-            在服务端设置 Authorization: Bearer &lt;密钥&gt;，先调用
-            /api/v1/connection 验证；草稿保存和发布为独立动作。密钥不要放入 URL
-            或前端网页。HTTP 412 表示版本冲突，需读取最新版本后合并。
-          </p>
-          <h2>调用审计</h2>
-          <label>
-            当前页结果筛选
-            <input
-              placeholder="例如 200、403"
-              value={result}
-              onChange={/* 更新审计结果筛选。 */ (e) => setResult(e.target.value)}
-            />
-          </label>
-          <table>
-            <thead>
-              <tr>
-                <th>时间</th>
-                <th>操作</th>
-                <th>结果</th>
-                <th>请求编号</th>
-              </tr>
-            </thead>
-            <tbody>
-              {audit?.data
-                ?.filter(
-                  /* 筛选符合当前条件的条目。 */ (item) => !result || String(item.result).includes(result)
-                )
-                .map(/* 将当前条目映射为展示内容。 */ (item) => (
-                  <tr key={item.id}>
-                    <td>{date(item.created_at)}</td>
-                    <td>{item.operation}</td>
-                    <td>{item.result}</td>
-                    <td>{item.request_id}</td>
+                          run(/* 提交当前管理请求并更新操作结果。 */ async () =>
+                            once(
+                              (
+                                await post(
+                                  `${root}/${selected}/keys/${key.key_id}/rotate`,
+                                  {
+                                    scopes: key.scopes,
+                                    expires_in_days: days,
+                                    overlap_hours: overlap
+                                  }
+                                )
+                              ).data
+                            )
+                          )
+                      }}
+                    >
+                      轮换（保留原权限）
+                    </button>
+                    <button
+                      className="studio-button--danger"
+                      disabled={busy || !!key.revoked_at}
+                      onClick={/* 确认用户意图后执行当前管理操作。 */ () => {
+                        if (window.confirm('立即撤销此密钥？调用方需更新配置。'))
+                          run(/* 提交当前管理请求并更新操作结果。 */ () =>
+                            post(`${root}/${selected}/keys/${key.key_id}/revoke`)
+                          )
+                      }}
+                    >
+                      立即撤销
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+          <fieldset>
+            <legend>接入说明</legend>
+            <p>
+              在服务端设置 Authorization: Bearer &lt;密钥&gt;，先调用
+              /api/v1/connection 验证；草稿保存和发布为独立动作。密钥不要放入 URL
+              或前端网页。HTTP 412 表示版本冲突，需读取最新版本后合并。
+            </p>
+          </fieldset>
+          <fieldset>
+            <legend>调用审计</legend>
+            <label>
+              当前页结果筛选
+              <input
+                placeholder="例如 200、403"
+                value={result}
+                onChange={/* 更新审计结果筛选。 */ (e) => setResult(e.target.value)}
+              />
+            </label>
+            <div className="studio-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>操作</th>
+                    <th>结果</th>
+                    <th>请求编号</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-          <button disabled={page === 1} onClick={/* 更新页码。 */ () => setPage(page - 1)}>
-            上一页
-          </button>
-          <span>
-            第 {page} 页，共 {audit?.pagination?.total || 0} 条
-          </span>
-          <button
-            disabled={!audit?.pagination?.has_next}
-            onClick={/* 更新页码。 */ () => setPage(page + 1)}
-          >
-            下一页
-          </button>
+                </thead>
+                <tbody>
+                  {audit?.data
+                    ?.filter(
+                      /* 筛选符合当前条件的条目。 */ (item) => !result || String(item.result).includes(result)
+                    )
+                    .map(/* 将当前条目映射为展示内容。 */ (item) => (
+                      <tr key={item.id}>
+                        <td>{date(item.created_at)}</td>
+                        <td>{item.operation}</td>
+                        <td>{item.result}</td>
+                        <td>{item.request_id}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <nav className="studio-pager" aria-label="审计分页">
+              <button disabled={page === 1} onClick={/* 更新页码。 */ () => setPage(page - 1)}>
+                上一页
+              </button>
+              <span className="studio-pager-info">
+                第 {page} 页，共 {audit?.pagination?.total || 0} 条
+              </span>
+              <button
+                disabled={!audit?.pagination?.has_next}
+                onClick={/* 更新页码。 */ () => setPage(page + 1)}
+              >
+                下一页
+              </button>
+            </nav>
+          </fieldset>
         </>
       )}
     </section>

@@ -14,7 +14,8 @@ x-blog: &blog
     BLOG_BACKUP_DIR: /app/data/backups
     JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
-    SITE_URL: ${SITE_URL:-http://localhost:9098}
+    SITE_URL: ${SITE_URL:-}
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
     VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
     CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:9098}
     ADMIN_CORS_ORIGINS: ${ADMIN_CORS_ORIGINS:-http://localhost:3033,http://127.0.0.1:3033}

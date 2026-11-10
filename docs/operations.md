@@ -8,7 +8,19 @@
 
 TRUST_PROXY 留空表示不信任代理；反向代理部署仅填实际代理 IP/CIDR，不能使用无限信任配置。代理应覆盖来自客户端的转发头。SITE_URL 用于 canonical、RSS、Sitemap，不从请求 Host 推断。VITE_BASE_PATH 同时传入构建阶段与服务运行环境；子路径部署例如设为 /blog/，SITE_URL 则包含 /blog，生产页面、API、上传和 Cookie Path 必须与此前缀一致；Vite 开发代理保留前缀及原 Origin，避免改变 CSRF 来源。修改后需重建镜像。
 
+来源校验优先使用 `PUBLIC_ORIGIN`，生产及未知环境留空时从 `SITE_URL` 提取 origin。生产推荐显式配置，例如 `SITE_URL=https://example.com/blog/`、`PUBLIC_ORIGIN=https://example.com`；协议与端口必须和浏览器访问一致。两者只接受 HTTP(S)，禁止凭据、查询和片段；`PUBLIC_ORIGIN` 只接受 origin（可带根斜杠），不接受子路径。显式无效配置不会回退到其他值。生产缺失或无效可信配置时，登录、首装及需要 CSRF 的写入返回 `403 INVALID_ORIGIN`，健康检查通过不代表这些接口可用。生产始终不以 Host 或转发头决定可信来源；显式 `NODE_ENV=development` 或 `NODE_ENV=test` 在 `PUBLIC_ORIGIN` 为空时使用请求 Host，忽略用于 SEO 的 `SITE_URL`；未知或未设置的环境只允许可信配置，缺失时仍拒绝。
+
+默认开发配置 `SITE_URL=http://localhost:9098`、`PUBLIC_ORIGIN=` 可直接配合 `npm run dev` 的 `http://localhost:9099` 入口使用：Vite 的 `changeOrigin:false` 保留浏览器 Host，来源校验按 9099 匹配。开发若显式设置 `PUBLIC_ORIGIN`，应填写浏览器入口 `http://localhost:9099`，有效或无效的显式值均不会回退。
+
+Compose 会把这两个变量传入服务，不再为缺失的 `SITE_URL` 补本机地址。宿主部署须在服务实际读取的 `.env` 或 systemd 环境中配置，并重启进程；`deploy.sh` 复用上传的 `.env`，不会自动推导公开域名。上线验收须检查真实域名登录成功、伪造 Host 加匹配恶意 Origin 仍返回 403。生产测试 fixture 也须显式设置临时服务的可信 origin，不能依赖 Host 回退。
+
 BLOG_DATA_DIR 是持久数据根目录，包含 blog.db（及在线 WAL/SHM）、uploads、logs、backups。宿主部署推荐 `/var/lib/blog`，目录归运行用户所有。BLOG_BACKUP_DIR 可单独指定备份目录。Compose 固定映射命名卷到 `/app/data`，不把宿主 BLOG_DATA_DIR 路径带入容器；卷内同时保留数据库、上传、设置、日志、备份。文件日志在 logs/，容器 stdout 日志另有大小轮转。不要将数据库、上传、日志、密钥打包进镜像或 Git。
+
+## 设置与登录限流
+
+`/api/settings` 公开返回站点展示配置，顶层只接受既有站点字段；未知字段、类型错误及超限写入返回 `400 INVALID_SETTINGS`，不会部分保存。设置序列化后最多 64KiB，字符串最多 8192 字符。主题保留自定义公开扩展，结构最多 6 层、256 个字段，禁止数组、空值和原型相关危险键；已知主题分组另有类型约束。历史顶层未知字段不再公开，并在下次成功保存时移除；上线不会主动改写现有设置文件。主题扩展仍属于公开展示数据。
+
+两个登录入口共享进程内限流：同 IP（IPv6 按 /56 聚合）每 15 分钟最多 50 次尝试，同 IP 与规范化用户名组合最多 5 次失败。成功登录归还本次组合额度，但仍占 IP 总额度；超限返回 429 和 Retry-After。不同 IP 不共用账号锁定桶。多进程或多副本部署须在入口配置共享限流，进程重启会重置本地额度；代理部署的客户端地址准确性依赖 `TRUST_PROXY`。
 
 ## 容器启动与核对
 

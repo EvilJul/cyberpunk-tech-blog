@@ -26,6 +26,7 @@ app.use((error, req, res, next) => res.status(500).json({ error: error.message }
 const server = app.listen(0, '127.0.0.1')
 await new Promise(resolve => server.once('listening', resolve))
 const base = `http://127.0.0.1:${server.address().port}`
+process.env.PUBLIC_ORIGIN = base
 async function request(route, method = 'GET', body, token, extraHeaders = {}) {
   return fetch(base + route, { method, headers: {
     ...(body ? { 'Content-Type': 'application/json' } : {}),

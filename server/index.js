@@ -37,6 +37,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 import {
   generalLimiter,
   authLimiter,
+  loginIpLimiter,
   uploadLimiter
 } from './middleware/rateLimit.js'
 import logger from './utils/logger.js'
@@ -209,7 +210,7 @@ if (fs.existsSync(distDir)) {
   )
 }
 
-app.use('/api/session/login', authLimiter)
+app.use('/api/session/login', loginIpLimiter, authLimiter)
 app.use('/api/session', sessionRouter)
 app.use('/api/setup', setupRouter)
 app.get('/api/studio/overview', requireAdminSession, /* 汇总管理员可见的文章、分类标签和访问统计。 */ (req, res) =>
@@ -251,7 +252,7 @@ app.use(
 app.use('/api/studio', studioRouter)
 
 // 认证路由（公开）- 应用登录速率限制
-app.use('/api/auth/login', authLimiter)
+app.use('/api/auth/login', loginIpLimiter, authLimiter)
 app.use('/api/auth', authRouter)
 
 // 公开 API（只读）- 应用通用速率限制

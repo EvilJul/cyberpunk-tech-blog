@@ -14,12 +14,32 @@ export function privateResponse(req, res, next) {
   res.set('X-Robots-Tag', 'noindex, nofollow')
   next()
 }
-// Origin must exactly match the serving origin (including scheme and port).
-// Referer fallback is limited to same-origin browser requests explicitly marked by Fetch Metadata.
-/** 校验浏览器请求来源。 */
+/** 解析可信 HTTP(S) 配置；公开来源仅允许 origin，站点地址允许部署子路径。 */
+function parseTrustedOrigin(value, originOnly = false) {
+  try {
+    if (value !== value.trim() || !/^https?:\/\//i.test(value)) return null
+    const url = new URL(value)
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname ||
+      url.username || url.password || url.search || url.hash ||
+      value.includes('\\') ||
+      (originOnly && !/^https?:\/\/[^/?#]+\/?$/i.test(value))) return null
+    return url.origin
+  } catch {
+    return null
+  }
+}
+
+/** 显式来源始终优先；开发及测试使用 Host，其他环境仅信任站点配置。 */
+function trustedOrigin(req) {
+  if (process.env.PUBLIC_ORIGIN) return parseTrustedOrigin(process.env.PUBLIC_ORIGIN, true)
+  if (['development', 'test'].includes(process.env.NODE_ENV))
+    return parseTrustedOrigin(`${req.protocol}://${req.get('host')}`, true)
+  return process.env.SITE_URL ? parseTrustedOrigin(process.env.SITE_URL) : null
+}
+
+/** 校验精确来源（含协议与端口）；仅同源 Fetch Metadata 允许 Referer 回退。 */
 export function requireSameOrigin(req, res, next) {
-  const expected =
-    process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`
+  const expected = trustedOrigin(req)
   let origin = req.get('origin')
   if (!origin && req.get('sec-fetch-site') === 'same-origin') {
     try {

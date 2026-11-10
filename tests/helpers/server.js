@@ -1,16 +1,22 @@
+import { createServer } from 'node:net'
 import { fork } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+/** 启动独立数据与固定可信来源的测试服务，并在结束时清理。 */
 export async function startFixture(t, entry = 'server/index.js', extraEnv = {}) {
   const root = await mkdtemp(join(tmpdir(), 'bolg-test-'))
   const dist = join(root, 'dist')
   await mkdir(join(dist, 'assets'), { recursive: true })
   await writeFile(join(dist, 'index.html'), '<!doctype html><html><head><title>old</title></head><body><div id="root"></div></body></html>')
   await writeFile(join(dist, 'assets', 'test-abcdefgh.js'), '/* asset */' + 'hello'.repeat(2000))
+  const reservation = createServer()
+  await new Promise(/* 预留端口以便启动前声明可信来源。 */ resolve => reservation.listen(0, '127.0.0.1', resolve))
+  const portNumber = reservation.address().port
+  await new Promise(/* 释放预留端口供子服务使用。 */ resolve => reservation.close(resolve))
   const child = fork(entry, [], {
-    env: { ...process.env, NODE_ENV: 'production', PUBLIC_HOST: '127.0.0.1', PUBLIC_PORT: '0', BLOG_DATA_DIR: root, BLOG_DIST_DIR: dist, JWT_SECRET: 'test-secret-123456789012345678901234567890', SITE_URL: 'https://blog.example', ...extraEnv },
+    env: { ...process.env, NODE_ENV: 'production', PUBLIC_HOST: '127.0.0.1', BLOG_DATA_DIR: root, BLOG_DIST_DIR: dist, JWT_SECRET: 'test-secret-123456789012345678901234567890', SITE_URL: 'https://blog.example', ...extraEnv, PUBLIC_PORT: String(portNumber), PUBLIC_ORIGIN: extraEnv.PUBLIC_ORIGIN || `http://127.0.0.1:${portNumber}` },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc']
   })
   let output = ''

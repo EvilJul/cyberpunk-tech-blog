@@ -49,7 +49,7 @@ test('production browser acceptance: navigation, reading, moderation and request
     ...process.env, NODE_ENV: 'production', PUBLIC_HOST: '127.0.0.1', PUBLIC_PORT: String(reservedPort),
     BLOG_DATA_DIR: root, BLOG_LOG_DIR: join(root, 'logs'), BLOG_DIST_DIR: join(repo, 'dist'),
     JWT_SECRET: 'browser-acceptance-isolated-secret-1234567890', VITE_BASE_PATH: '/',
-    CORS_ORIGIN: `http://127.0.0.1:${reservedPort}`, SITE_URL: 'http://127.0.0.1'
+    PUBLIC_ORIGIN: `http://127.0.0.1:${reservedPort}`, CORS_ORIGIN: `http://127.0.0.1:${reservedPort}`, SITE_URL: 'http://127.0.0.1'
   }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] })
   let output = ''
   child.stdout.on('data', chunk => { output += chunk })

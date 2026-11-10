@@ -18,7 +18,7 @@ const artifacts = join(repo, 'test-results', 'frontend-acceptance')
 const code = 'const answer = 42;\nconsole.log(answer);'
 const content = `# 阅读验收\n\n## 重复 *标题*\n\n正文 **加粗** 与 [安全链接](https://example.com)。\n\n| 功能 | 状态 |\n| --- | --- |\n| GFM 表格 | 可读 |\n\n> 引用内容\n\n- 第一项\n  - 嵌套项目\n\n\`\`\`javascript\n${code}\n\`\`\`\n\n![验收示意图](/uploads/acceptance.svg)\n\n### 三级标题\n\n${'长文阅读内容用于滚动测试。'.repeat(90)}\n\n## 重复 *标题*\n\n![第二张示意图](/uploads/acceptance.svg)\n\n<script>window.__acceptanceXss = true</script>\n<img src=x onerror="window.__acceptanceXss=true">\n\n[危险链接](javascript:window.__acceptanceXss=true)\n`
 
-test('production browser acceptance: navigation, reading, moderation and request budget', { timeout: 180000 }, async t => {
+test('production browser acceptance: navigation, reading, moderation and request budget', { timeout: 180000 }, /* 使用隔离生产服务验证读者交互与公开数据隔离。 */ async t => {
   await access(join(repo, 'dist/index.html'))
   await mkdir(artifacts, { recursive: true })
   const root = await mkdtemp(join(tmpdir(), 'blog-browser-'))
@@ -77,6 +77,9 @@ test('production browser acceptance: navigation, reading, moderation and request
   })()
   browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce', permissions: ['clipboard-read', 'clipboard-write'] })
+  // 隔离验收不依赖外部字体 CDN，统一使用系统回退字体并保留全部布局断言。
+  await context.route('https://fonts.googleapis.com/**', /* 返回空字体表，避免外网字体阻塞本地页面 load。 */ route => route.fulfill({ contentType: 'text/css', body: '' }))
+  evidence.externalFontFixture = 'system fallback; remote stylesheet isolated'
   const page = await context.newPage()
   page.on('pageerror', error => evidence.browserErrors.push({ kind: 'pageerror', message: error.message }))
   page.on('console', message => { if (message.type() === 'error' || /CORS|Content Security Policy|violates.*directive/i.test(message.text())) evidence.browserErrors.push({ kind: message.type(), message: message.text() }) })
@@ -184,6 +187,11 @@ test('production browser acceptance: navigation, reading, moderation and request
     await expect(page.locator('.comments')).not.toContainText('数据库待审核隐私内容')
     await page.getByRole('button', { name: '回复 已审作者', exact: true }).click()
     await expect(page.getByLabel('评论内容')).toBeFocused()
+    await expect(page.getByLabel('昵称')).toHaveAttribute('maxlength', '50')
+    await page.getByLabel('昵称').fill('访'.repeat(51))
+    await expect(page.getByLabel('昵称')).toHaveValue('访'.repeat(50))
+    await expect(page.getByLabel('评论内容', { exact: true })).toHaveAttribute('maxlength', '2000')
+    await expect(page.getByLabel('邮箱（不公开）', { exact: true })).toHaveAttribute('maxlength', '254')
     await page.getByLabel('昵称').fill('浏览器访客')
     await page.getByLabel('评论内容').fill('浏览器提交待审核内容')
     await page.getByRole('button', { name: '发表评论', exact: true }).click()
@@ -224,7 +232,8 @@ test('production browser acceptance: navigation, reading, moderation and request
       await page.screenshot({ path: join(artifacts, `reading-panel-${size}.png`), animations: 'disabled' })
     }
     await page.goto(base)
-    await expect(page.locator('[data-reader-effects]')).toHaveCount(1)
+    // 手机布局不再挂载装饰效果，桌面效果已在本检查开头覆盖。
+    await expect(page.locator('[data-reader-effects]')).toHaveCount(0)
     await expect(page.getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
     await page.unroute('**/api/settings')
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -237,7 +246,7 @@ test('production browser acceptance: navigation, reading, moderation and request
       for (const theme of ['configured']) {
         await expect(page.getByRole('button', { name: '浅色', exact: true })).toHaveCount(0)
         await expect(page.getByRole('button', { name: '深色', exact: true })).toHaveCount(0)
-        await expect(page.locator('.reader-dock')).toBeVisible()
+        await expect(page.locator(size === 'mobile' ? '.reader-mobile-nav' : '.reader-dock')).toBeVisible()
         await page.evaluate(() => window.scrollTo(0, 0))
         await page.evaluate(() => document.fonts.ready)
         const filename = `${size}-${theme}.png`
@@ -264,6 +273,7 @@ test('production browser acceptance: navigation, reading, moderation and request
     }
   })
   await check('article search stays in place and restores reading position', /* 验证详情页模态搜索、键盘关闭及结果跳转。 */ async () => {
+    await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto(`${base}/article/acceptance-0`)
     await expect(page.locator('.markdown-body')).toBeVisible()
     await page.evaluate(/* 设置阅读位置以验证打开关闭搜索不滚动正文。 */ () => window.scrollTo(0, 300))
@@ -328,16 +338,16 @@ test('production browser acceptance: navigation, reading, moderation and request
       assert.equal(current.pathname, '/explore')
       assert.equal(current.searchParams.get('category'), '阅读分类')
       assert.equal(current.searchParams.get('tag'), '验收标签')
-      assert.equal(current.searchParams.get('focus'), 'search')
+      assert.equal(current.searchParams.has('focus'), false)
     }
     assert.equal((await searchedResponse).status(), 200)
     await expect(page.locator('.explore-results').getByRole('link', { name: '完整阅读验收文章', exact: true })).toBeVisible()
     await page.reload()
-    await expect(search).toBeFocused()
+    await expect(search).toHaveValue('完整阅读')
     await expect(categories.locator('[aria-current="true"]')).toContainText('阅读分类')
     await expect(tags.locator('[aria-current="true"]')).toContainText('验收标签')
     await page.getByRole('link', { name: '清除筛选', exact: true }).click()
-    await expect(page).toHaveURL(`${base}/explore`)
+    await expect(page).toHaveURL(`${base}/explore?q=${encodeURIComponent('完整阅读')}`)
     await page.goBack()
     await expect(tags.locator('[aria-current="true"]')).toContainText('验收标签')
     await page.goForward()

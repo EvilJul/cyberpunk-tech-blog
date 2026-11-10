@@ -105,11 +105,14 @@ test('isolated security acceptance', async t => {
   assert.equal((await (await request('/articles/stats/summary')).json()).total, 1)
   assert.equal((await request('/comments/old-draft', 'POST', { author: 'a', content: 'b' })).status, 404)
   assert.equal((await request(`/comments/${article.id}`, 'POST', { author: {}, content: 'b' })).status, 400)
-  const payload = { author: 'visitor', content: '<script>alert(1)</script>' }
+  assert.equal((await request(`/comments/${article.id}`, 'POST', { author: '访'.repeat(51), content: '内容' })).status, 400)
+  assert.equal((await request(`/comments/${article.id}`, 'POST', { author: '访客', content: '长'.repeat(2001) })).status, 400)
+  const payload = { author: '访'.repeat(50), content: '<script>alert(1)</script>' }
   const commentResponse = await request(`/comments/${article.id}`, 'POST', payload)
   assert.equal(commentResponse.status, 201)
   const comment = await commentResponse.json()
   assert.equal(comment.status, 'pending')
+  assert.equal(comment.author.length, 50)
   assert.equal(comment.content, payload.content)
   assert.match(comment.id, /^[0-9a-f-]{36}$/)
   assert.deepEqual(await (await request(`/comments/${article.id}`)).json(), [])

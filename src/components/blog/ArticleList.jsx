@@ -1,271 +1,188 @@
 import { apiFetch } from '../../utils/api'
-import { Link, useParams } from 'react-router-dom'
-import React, { useState, useEffect, useMemo } from 'react'
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
 import ArticleCard from './ArticleCard'
 import SearchBar from './SearchBar'
-import { useSettings } from '../../contexts/SettingsContext'
-import { Folder, X } from 'lucide-react'
-import { logger } from '../../utils/logger'
+import { useMobileReader } from '../../utils/readerViewport'
+import './article-list.css'
 
-/** 展示分页文章，支持路由筛选、组合筛选及弹层自动聚焦。 */
-export default function ArticleList({ onArticleClick, perPage = 10, onTotal, filterCategory, filterTag, showCategories = true, autoFocusSearch = false }) {
+/** 严格解析十进制页码并限制可请求范围。 */
+function parsePage(value) {
+  return /^[0-9]+$/.test(String(value)) && Number(value) > 0 ? Math.min(1000000, Number(value)) : 1
+}
+
+/** 展示可取消、防乱序的分页结果；弹层模式使用独立状态而不读取外部查询参数。 */
+export default function ArticleList({ onArticleClick, perPage = 10, onTotal, filterCategory, filterTag, showCategories = true, autoFocusSearch = false, syncUrl = true, initialQuery = '', initialPage = 1, onStateChange, initialScrollTop = 0 }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { name } = useParams()
+  const isMobile = useMobileReader()
+  const params = new URLSearchParams(syncUrl ? location.search : '')
+  const [local, setLocal] = useState({ query: initialQuery, page: parsePage(initialPage) })
+  const query = syncUrl ? params.get('q') || '' : local.query
+  const page = syncUrl ? parsePage(params.get('page')) : local.page
+  const [draft, setDraft] = useState(query)
+  const [composing, setComposing] = useState(false)
+  const isTag = location.pathname.includes('/tag/')
+  const category = filterCategory ?? (isTag ? null : name) ?? (syncUrl ? params.get('category') : null)
+  const tag = filterTag ?? (isTag ? name : null) ?? (syncUrl ? params.get('tag') : null)
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
+  const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
-  const [isComposing, setIsComposing] = useState(false)
-  const { name } = useParams()
-  const isTag = window.location.pathname.includes('/tag/')
-  const selectedCategory = filterCategory ?? (isTag ? null : name)
-  const selectedTag = filterTag ?? (isTag ? name : null)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    per_page: perPage,
-    total: 0,
-    total_pages: 0
-  })
-  const { settings } = useSettings()
+  const [error, setError] = useState(false)
+  const [retry, setRetry] = useState(0)
+  const generation = useRef(0)
+  const callbacks = useRef({ onTotal, onStateChange })
+  callbacks.current = { onTotal, onStateChange }
+  const latest = useRef(null)
+  latest.current = { location, navigate, syncUrl }
+  const correction = useRef(null)
+  const completedEmpty = useRef(null)
+  const resultsRef = useRef(null)
+  const scrollPending = useRef(false)
+  const previousFilters = useRef({ filterCategory, filterTag, perPage, locationKey: location.key })
 
-  // 搜索防抖：500ms 延迟，清除时立即生效，输入法组合期间暂停
-  useEffect(() => {
-    if (isComposing) return
-    if (!searchQuery.trim()) {
-      setDebouncedSearchQuery('')
-      return
+  /** 原子更新搜索与页码，保留分类、标签及其他查询参数。 */
+  function updateState(nextQuery, nextPage, replace = true) {
+    const current = latest.current
+    if (!current.syncUrl) { setLocal({ query: nextQuery, page: nextPage }); return }
+    const next = new URLSearchParams(current.location.search)
+    if (nextQuery) next.set('q', nextQuery)
+    else next.delete('q')
+    if (nextPage > 1) next.set('page', String(nextPage))
+    else next.delete('page')
+    const search = next.toString()
+    if (search !== current.location.search.replace(/^\?/, '')) current.navigate({ pathname: current.location.pathname, search }, { replace, state: current.location.state })
+  }
+
+  useEffect(/* 浏览器前进后退同步输入草稿。 */ () => { setDraft(query) }, [query])
+  useEffect(/* 规范化已知重复参数并消费临时聚焦，不改变无关参数。 */ () => {
+    if (!syncUrl) return
+    const next = new URLSearchParams(location.search)
+    for (const key of ['q', 'page', 'category', 'tag']) {
+      if (next.has(key)) next.set(key, next.get(key))
     }
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [searchQuery, isComposing])
+    if (page === 1) next.delete('page')
+    else if (next.has('page')) next.set('page', String(page))
+    if (!query) next.delete('q')
+    if (next.get('focus') === 'search') next.delete('focus')
+    if (next.toString() !== location.search.replace(/^\?/, '')) navigate({ pathname: location.pathname, search: next.toString() }, { replace: true, state: location.state })
+  }, [syncUrl, location.search, location.pathname, navigate, page, query])
+  useEffect(/* 组合输入期间不提交，清空立即生效，其余等待五百毫秒。 */ () => {
+    if (composing || draft === query) return
+    if (!draft) { updateState('', 1); return }
+    const timer = setTimeout(/* 提交稳定关键词并回第一页。 */ () => updateState(draft, 1), 500)
+    return /* 后续输入或卸载取消未提交关键词。 */ () => clearTimeout(timer)
+  }, [draft, composing, query])
 
-  // 获取文章列表
-  const fetchArticles = async (page = 1) => {
+  useEffect(/* 仅在桌面确实展示分类时加载目录。 */ () => {
+    if (!showCategories || isMobile) return
+    const controller = new AbortController()
+    /** 获取分类目录，主动取消不显示错误。 */
+    async function loadCategories() {
+      try {
+        const response = await apiFetch('/api/categories', { signal: controller.signal })
+        if (!response.ok) throw new Error('分类加载失败')
+        const data = await response.json()
+        if (!controller.signal.aborted) setCategories(data)
+      } catch (failure) {
+        if (!controller.signal.aborted) console.error('分类加载失败', failure)
+      }
+    }
+    loadCategories()
+    return /* 停止过期目录请求。 */ () => controller.abort()
+  }, [showCategories, isMobile])
+
+  useEffect(/* 每组条件拥有独立取消信号与代次，旧响应不能写入任何结果状态。 */ () => {
+    const controller = new AbortController()
+    const id = ++generation.current
+    const signature = JSON.stringify([query, page, category, tag, perPage])
+    if (completedEmpty.current === signature) { completedEmpty.current = null; return }
+    const isCorrection = correction.current === signature
+    correction.current = null
     setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page,
-        per_page: perPage,
-        sort: 'publish_date',
-        order: 'desc',
-        status: 'published'
-      })
-
-      if (selectedCategory) {
-        params.append('category', selectedCategory)
+    setError(false)
+    /** 请求公开列表，只接受当前代次，越界至多触发一次补请求。 */
+    async function load() {
+      try {
+        const request = new URLSearchParams({ page, per_page: perPage, sort: 'publish_date', order: 'desc', status: 'published' })
+        if (query.trim()) request.set('search', query.trim())
+        if (category) request.set('category', category)
+        if (tag) request.set('tag', tag)
+        const response = await apiFetch(`/api/articles?${request}`, { signal: controller.signal })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const data = await response.json()
+        if (controller.signal.aborted || generation.current !== id) return
+        const rows = Array.isArray(data) ? data : data.data
+        if (!Array.isArray(rows)) throw new Error('列表响应格式无效')
+        const total = Number(data.pagination?.total ?? rows.length)
+        const pages = Math.max(1, Number(data.pagination?.total_pages ?? Math.ceil(total / perPage)))
+        const validPage = total === 0 ? 1 : Math.min(page, pages)
+        if (validPage !== page && (total === 0 || !isCorrection)) {
+          correction.current = JSON.stringify([query, validPage, category, tag, perPage])
+          if (total === 0) completedEmpty.current = correction.current
+          updateState(query, validPage)
+          if (total !== 0) return
+        }
+        setArticles(rows)
+        setResult({ query, page: validPage, total, pages })
+        setLoading(false)
+        callbacks.current.onTotal?.(total)
+        callbacks.current.onStateChange?.({ query, page: validPage })
+        if (scrollPending.current) {
+          scrollPending.current = false
+          resultsRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+        }
+      } catch (failure) {
+        if (controller.signal.aborted || generation.current !== id) return
+        setError(true)
+        setLoading(false)
       }
-
-      if (selectedTag) params.append('tag', selectedTag)
-
-      if (debouncedSearchQuery.trim()) {
-        params.append('search', debouncedSearchQuery.trim())
-      }
-
-      const url = `/api/articles?${params}`
-      logger.info('正在获取文章', { url, page })
-
-      const res = await apiFetch(url)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-      }
-
-      const data = await res.json()
-
-      logger.info('获取文章成功', {
-        total: data.pagination?.total || data.length
-      })
-
-      // 适配新旧 API 格式
-      if (data.data) {
-        setArticles(data.data)
-        setPagination(data.pagination)
-        onTotal?.(data.pagination.total)
-      } else {
-        // 兼容旧格式
-        setArticles(data)
-        setPagination({
-          page: 1,
-          per_page: data.length,
-          total: data.length,
-          total_pages: 1
-        })
-      }
-
-      setLoading(false)
-    } catch (err) {
-      logger.error('获取文章失败', { error: err.message, stack: err.stack })
-      setArticles([])
-      setPagination({
-        page: 1,
-        per_page: perPage,
-        total: 0,
-        total_pages: 0
-      })
-      setLoading(false)
     }
+    load()
+    return /* 条件变化或卸载立即取消请求并使迟到响应失效。 */ () => { controller.abort(); generation.current++ }
+  }, [query, page, category, tag, perPage, retry, filterCategory, filterTag])
+
+  /** 显式分页增加历史，并在成功加载后定位结果区。 */
+  function changePage(nextPage) {
+    scrollPending.current = true
+    updateState(query, nextPage, false)
   }
-
-  useEffect(/* 仅在列表自行展示分类时请求分类目录。 */ () => {
-    if (!showCategories) return
-    logger.info('ArticleList 组件已挂载')
-    // 获取分类
-    apiFetch('/api/categories')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then(setCategories)
-      .catch((err) => {
-        logger.error('获取分类失败', { error: err.message })
-      })
-  }, [showCategories])
-
-  useEffect(/* 筛选条件变化后从第一页重新加载。 */ () => {
-    fetchArticles(1)
-  }, [debouncedSearchQuery, selectedCategory, selectedTag, perPage])
-
-  const articleCategories = useMemo(() => {
-    const catMap = {}
-    categories.forEach((cat) => {
-      catMap[cat.name] = cat.count || 0
-    })
-    return Object.entries(catMap).map(([name, count]) => ({ name, count }))
-  }, [categories])
-
-  if (loading && !articles.length) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    )
+  /** 分类切换保留关键词及标签，清除旧页码。 */
+  function categoryLink(value) {
+    const next = new URLSearchParams(syncUrl ? location.search : '')
+    next.delete('category')
+    next.delete('page')
+    next.delete('focus')
+    if (tag) next.set('tag', tag)
+    if (!syncUrl && query) next.set('q', query)
+    return `${value ? `/category/${encodeURIComponent(value)}` : '/'}${next.size ? `?${next}` : ''}`
   }
-
+  const stale = loading || error || result?.query !== query || result?.page !== page
   return (
-    <div>
-      <SearchBar autoFocus={autoFocusSearch} onSearch={setSearchQuery} onComposingChange={setIsComposing} />
-
-      {searchQuery && (
-        <div className="mb-4 text-sm text-dark-400">
-          搜索 "<span className="text-gold">{searchQuery}</span>" 找到{' '}
-          {pagination.total} 篇文章
+    <div className="reader-article-list" data-initial-scroll-top={initialScrollTop} data-list-ready={!loading && !error}>
+      <SearchBar query={draft} onSearch={setDraft} onComposingChange={setComposing} autoFocus={autoFocusSearch} focusRequest={syncUrl && params.get('focus') === 'search'} />
+      {showCategories && isMobile && <div className="reader-list-heading"><h2>最新文章</h2><Link to="/explore">浏览分类</Link></div>}
+      {showCategories && !isMobile && <nav aria-label="文章分类" className="mb-6 flex flex-wrap gap-2 text-dark-400">
+        <Link to={categoryLink(null)}>全部</Link>
+        {categories.map(/* 渲染真实目录入口。 */ item => <Link key={item.name} to={categoryLink(item.name)} className={`px-3 py-1.5 text-sm rounded-full border ${category === item.name ? 'text-gold border-gold/30 bg-gold/20' : 'border-dark-700/50 hover:text-gold'}`}>{item.name} ({item.count || 0})</Link>)}
+      </nav>}
+      <div ref={resultsRef} className="reader-list-results" aria-busy={loading}>
+        <div role="status" aria-live="polite">
+          {loading ? (articles.length ? '正在更新，以下为上次结果…' : '正在加载文章…') : error ? '' : query ? `搜索“${query}”找到 ${result?.total ?? 0} 篇文章` : ''}
         </div>
-      )}
-
-      {showCategories && <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Folder size={16} className="text-gold" />
-          <span className="text-sm font-medium text-white">按分类筛选</span>
+        {error && <div role="alert" className="reader-list-error">文章加载失败，请重试。{articles.length > 0 && '以下为上次结果。'}<button type="button" onClick={/* 保留当前条件重新请求。 */ () => setRetry(retry + 1)}>重试</button></div>}
+        {!loading && !error && articles.length === 0 && <p className="glass-card p-8 text-center">{query || category || tag ? '没有找到匹配的文章，请调整搜索或筛选条件' : '暂无文章'}</p>}
+        <div className="space-y-4" aria-label={stale ? '上次文章结果' : '文章结果'}>
+          {articles.map(/* 保持卡片入口稳定，不增加逐篇请求。 */ article => <ArticleCard key={article.id} article={article} onClick={onArticleClick} searchQuery={result?.query || ''} />)}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            to="/"
-            className={`px-3 py-1.5 rounded-full text-sm transition-all ${
-              !selectedCategory
-                ? 'bg-gold/20 text-gold border border-gold/30'
-                : 'bg-dark-800/50 text-dark-400 border border-dark-700/50 hover:text-gold hover:border-gold/30'
-            }`}
-          >
-            全部
-          </Link>
-          {articleCategories.map((cat) => (
-            <Link
-              key={cat.name}
-              to={`/category/${encodeURIComponent(cat.name)}`}
-              className={`px-3 py-1.5 rounded-full text-sm transition-all flex items-center gap-1.5 ${
-                selectedCategory === cat.name
-                  ? 'bg-gold/20 text-gold border border-gold/30'
-                  : 'bg-dark-800/50 text-dark-400 border border-dark-700/50 hover:text-gold hover:border-gold/30'
-              }`}
-            >
-              {cat.name}
-              <span className="text-xs opacity-70">({cat.count})</span>
-              {selectedCategory === cat.name && <X size={12} />}
-            </Link>
-          ))}
-        </div>
-      </div>}
-
-      <div className="space-y-4">
-        {articles.length === 0 ? (
-          <div className="glass-card p-8 text-center">
-            <p className="text-dark-400">
-              {searchQuery || selectedCategory || selectedTag
-                ? '没有找到匹配的文章'
-                : '暂无文章'}
-            </p>
-          </div>
-        ) : (
-          articles.map((article) => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-              onClick={onArticleClick}
-              searchQuery={searchQuery}
-            />
-          ))
-        )}
       </div>
-
-      {/* 分页控制 */}
-      {pagination.total_pages > 1 && (
-        <div className="mt-8 flex items-center justify-between">
-          <div className="text-sm text-dark-400">
-            显示 {articles.length} / {pagination.total} 篇文章
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => fetchArticles(pagination.page - 1)}
-              disabled={!pagination.has_prev}
-              className="px-4 py-2 rounded-lg bg-dark-800/50 text-white border border-dark-700/50 hover:border-gold/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              上一页
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from(
-                { length: Math.min(pagination.total_pages, 5) },
-                (_, i) => {
-                  let pageNum
-                  if (pagination.total_pages <= 5) {
-                    pageNum = i + 1
-                  } else if (pagination.page <= 3) {
-                    pageNum = i + 1
-                  } else if (pagination.page >= pagination.total_pages - 2) {
-                    pageNum = pagination.total_pages - 4 + i
-                  } else {
-                    pageNum = pagination.page - 2 + i
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => fetchArticles(pageNum)}
-                      className={`w-10 h-10 rounded-lg border transition-all ${
-                        pagination.page === pageNum
-                          ? 'bg-gold/20 text-gold border-gold/30'
-                          : 'bg-dark-800/50 text-dark-400 border-dark-700/50 hover:border-gold/30'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                }
-              )}
-            </div>
-
-            <button
-              onClick={() => fetchArticles(pagination.page + 1)}
-              disabled={!pagination.has_next}
-              className="px-4 py-2 rounded-lg bg-dark-800/50 text-white border border-dark-700/50 hover:border-gold/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
-      )}
+      {result && <nav aria-label="文章分页" className="reader-list-pagination">
+        <button type="button" disabled={loading || error || page <= 1} onClick={/* 请求前一页。 */ () => changePage(page - 1)}>上一页</button>
+        <span aria-current="page">{page} / {result.pages}</span>
+        <button type="button" disabled={loading || error || page >= result.pages} onClick={/* 请求后一页。 */ () => changePage(page + 1)}>下一页</button>
+      </nav>}
     </div>
   )
 }

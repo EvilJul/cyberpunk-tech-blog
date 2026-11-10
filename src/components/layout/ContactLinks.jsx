@@ -26,10 +26,11 @@ function contactUrl(value, local = false) {
 }
 
 /** 展示公众号名、微信号和可选二维码，关闭后恢复原按钮焦点。 */
-function WechatDialog({ name, account, qr, onClose }) {
+export function WechatDialog({ name, account, qr, onClose }) {
   const dialog = useRef(null)
   const [failed, setFailed] = useState(false)
   const [message, setMessage] = useState('')
+  const [attempt, setAttempt] = useState(0)
   useEffect(/* 使用原生模态框约束焦点，避免背景页面随弹层滚动。 */ () => {
     const element = dialog.current
     const trigger = document.activeElement
@@ -39,17 +40,18 @@ function WechatDialog({ name, account, qr, onClose }) {
     return /* 关闭时恢复滚动状态与触发焦点。 */ () => {
       element.close()
       document.body.style.overflow = overflow
-      trigger?.focus({ preventScroll: true })
+      const target = trigger?.isConnected ? trigger : document.querySelector('[data-reader-more]')
+      target?.focus({ preventScroll: true })
     }
   }, [])
   return (
     <dialog ref={dialog} className="reader-wechat-dialog" aria-labelledby="reader-wechat-title" onCancel={onClose}>
       <header><h2 id="reader-wechat-title">微信公众号</h2><button type="button" aria-label="关闭公众号" onClick={onClose}><X size={20} aria-hidden="true" /></button></header>
       {name && <p className="reader-wechat-name">{name}</p>}
-      {qr && !failed && <img src={qr} alt="微信公众号二维码" onError={/* 图片失败时保留名称与账号作为替代关注方式。 */ () => setFailed(true)} />}
-      {failed && <p role="alert">二维码加载失败，请在微信中搜索下方账号或公众号名称。</p>}
+      {qr && !failed && <img key={attempt} src={qr} alt="微信公众号二维码" onError={/* 图片失败时保留名称与账号作为替代关注方式。 */ () => setFailed(true)} />}
+      {failed && <div role="alert"><p>{name || account ? '二维码加载失败，可搜索下方名称或微信号关注。' : '二维码加载失败，目前没有其他可用的公众号资料。'}</p><button type="button" onClick={/* 重建图片节点重试，不丢失已有资料。 */ () => { setFailed(false); setAttempt(attempt + 1) }}>重试二维码</button></div>}
       {account && <p>微信号：<strong>{account}</strong></p>}
-      <p className="reader-wechat-hint">{qr && !failed ? '使用微信扫描二维码关注。' : '打开微信，搜索公众号名称或微信号关注。'}</p>
+      <p className="reader-wechat-hint">{qr && !failed ? '使用微信扫描二维码关注。' : name || account ? '打开微信，搜索公众号名称或微信号关注。' : '可重试二维码，或关闭后稍后再试。'}</p>
       {account && <button type="button" className="reader-wechat-copy" onClick={/* 复制微信号并保留手动复制的失败提示。 */ async () => {
         try {
           await navigator.clipboard.writeText(account)
@@ -64,7 +66,7 @@ function WechatDialog({ name, account, qr, onClose }) {
 }
 
 /** 联系方式固定显示三种图标，有效配置点亮，空值与危险链接保持不可点击。 */
-export default function ContactLinks({ settings }) {
+export default function ContactLinks({ settings, onWechatOpen }) {
   const [open, setOpen] = useState(false)
   const github = contactUrl(settings.github)
   const email = text(settings.email)
@@ -77,7 +79,7 @@ export default function ContactLinks({ settings }) {
     <div className="reader-contacts" aria-label="作者联系账号">
       {github ? <a className="reader-contact is-enabled" href={github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="访问 GitHub"><Github size={19} aria-hidden="true" /></a> : <span className="reader-contact" role="img" aria-label="GitHub（未设置）" title="GitHub 未设置"><Github size={19} aria-hidden="true" /></span>}
       {validEmail ? <a className="reader-contact is-enabled" href={`mailto:${encodeURIComponent(email)}`} aria-label="联系邮箱" title="发送邮件"><Mail size={19} aria-hidden="true" /></a> : <span className="reader-contact" role="img" aria-label="联系邮箱（未设置）" title="联系邮箱未设置"><Mail size={19} aria-hidden="true" /></span>}
-      {wechat ? <button type="button" className="reader-contact reader-contact--wechat is-enabled" aria-label="微信公众号" aria-haspopup="dialog" title="查看微信公众号" onClick={/* 在当前页面展示公众号，不跳转外部网站。 */ () => setOpen(true)}><MessagesSquare size={19} aria-hidden="true" /></button> : <span className="reader-contact" role="img" aria-label="微信公众号（未设置）" title="微信公众号未设置"><MessagesSquare size={19} aria-hidden="true" /></span>}
+      {wechat ? <button type="button" className="reader-contact reader-contact--wechat is-enabled" aria-label="微信公众号" aria-haspopup="dialog" title="查看微信公众号" onClick={/* 在当前页面展示公众号，不跳转外部网站。 */ () => onWechatOpen ? onWechatOpen({ name, account, qr }) : setOpen(true)}><MessagesSquare size={19} aria-hidden="true" /></button> : <span className="reader-contact" role="img" aria-label="微信公众号（未设置）" title="微信公众号未设置"><MessagesSquare size={19} aria-hidden="true" /></span>}
       {open && wechat && <WechatDialog key={qr} name={name} account={account} qr={qr} onClose={/* 关闭公众号信息弹层。 */ () => setOpen(false)} />}
     </div>
   )

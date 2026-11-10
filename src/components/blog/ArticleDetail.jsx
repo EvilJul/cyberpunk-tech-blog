@@ -2,6 +2,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { apiFetch } from '../../utils/api'
 import React, { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ReaderReturnLink from './ReaderReturnLink'
 import CommentSection from './CommentSection'
 import MarkdownContent from './MarkdownContent'
 import { useSettings } from '../../contexts/SettingsContext'
@@ -90,7 +91,7 @@ export default function ArticleDetail() {
           <>
             <h1>{error}</h1>
             <button onClick={() => setRetry((n) => n + 1)}>重试</button>
-            <Link to="/">返回首页</Link>
+            <ReaderReturnLink />
           </>
         ) : (
           <p role="status">正在加载文章…</p>
@@ -101,7 +102,7 @@ export default function ArticleDetail() {
   return (
     <article className="article-reading">
       <nav className="article-reading-nav" aria-label="文章操作">
-      <Link to="/">返回文章列表</Link>
+      <ReaderReturnLink />
       {user?.role === 'admin' && (
         <Link to={`/studio/editor/${article.id}`}>编辑文章</Link>
       )}

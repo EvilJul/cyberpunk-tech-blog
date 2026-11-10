@@ -4,6 +4,7 @@ import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { ThemeProvider } from './themes/ThemeProvider'
 import './index.css'
+import './mobile-reader.css'
 import { reportError } from './utils/logger'
 
 window.addEventListener('error', (e) => reportError(e.message))

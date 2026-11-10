@@ -1,0 +1,15 @@
+.reader-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.reader-list-heading h2 { font-size: 18px; font-weight: 600; }
+.reader-list-heading a { display: inline-flex; align-items: center; min-height: 44px; }
+.reader-list-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; }
+.reader-list-pagination button, .reader-list-error button, .reader-search-clear { min-width: 44px; min-height: 44px; padding: 8px 12px; }
+.reader-list-pagination button:disabled { opacity: .5; cursor: not-allowed; }
+.reader-list-pagination button, .reader-list-error button { border: 1px solid currentColor; border-radius: 8px; }
+.reader-list-results { scroll-margin-top: 16px; }
+.reader-list-error { padding: 12px 0; }
+.reader-list-search input:focus-visible, .reader-article-list button:focus-visible, .reader-article-list a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .reader-list-search { margin-bottom: 8px; }
+  .reader-list-search > div { min-height: 48px; padding-block: 0; }
+  .reader-list-search input { font-size: 16px; min-height: 48px; }
+}

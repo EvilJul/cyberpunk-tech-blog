@@ -1,5 +1,6 @@
 import { apiFetch } from '../../utils/api'
 import React, { useState, useEffect } from 'react'
+/** 展示和提交审核评论，昵称与正文输入上限遵循后端校验。 */
 export default function CommentSection({ articleId }) {
   const [comments, setComments] = useState([]),
     [error, setError] = useState(''),
@@ -107,7 +108,7 @@ export default function CommentSection({ articleId }) {
           昵称
           <input
             required
-            maxLength={80}
+            maxLength={50}
             value={form.author}
             onChange={(e) => setForm({ ...form, author: e.target.value })}
           />
@@ -126,7 +127,7 @@ export default function CommentSection({ articleId }) {
           <textarea
             id="comment-content"
             required
-            maxLength={5000}
+            maxLength={2000}
             value={form.content}
             onChange={(e) => setForm({ ...form, content: e.target.value })}
           />

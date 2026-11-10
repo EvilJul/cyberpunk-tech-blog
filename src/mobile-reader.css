@@ -1,0 +1,163 @@
+/* 手机读者专属表面：不覆盖已保存的站点背景或工作台主题。 */
+/* 动态配色缺失时仍有可读实色；正常主题通过根节点行内变量覆盖这些默认值。 */
+.reader-shell {
+  --reader-surface: #141837;
+  --reader-text: #ffffff;
+  --reader-muted: #a0aec0;
+  --reader-accent: #c7c9ff;
+}
+.reader-mobile-nav { display: none; }
+.reader-modal { color: var(--reader-text, #f4f6fc); background: var(--reader-surface, #1b2230); border: 1px solid #7d85944d; border-radius: 20px; padding: 20px; width: min(720px, calc(100% - 32px)); max-height: min(85vh, var(--reader-visible-height, 85dvh)); overflow-y: auto; overscroll-behavior: contain; }
+.reader-modal::backdrop { background: #060a14b8; }
+.reader-modal-heading { position: sticky; top: -20px; z-index: 6; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: inherit; padding: 12px 0; margin-bottom: 12px; }
+.reader-modal-heading h2 { font-size: 20px; font-weight: 700; }
+.reader-modal button:not(.reader-contact), .reader-more-links a, .reader-wechat-dialog button { min-height: 44px; }
+.reader-modal-heading button, .reader-more-links a, .explore-open-filters, .explore-show-results { border: 1px solid currentColor; border-radius: 10px; padding: 8px 14px; }
+.reader-more-links { display: grid; gap: 10px; margin-top: 20px; }
+.reader-identity { margin-bottom: 16px; }
+.reader-identity-line { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.reader-identity-line > div { min-width: 0; }
+.reader-identity-line strong { font-size: 16px; }
+.reader-identity-line p { font-size: 13px; line-height: 1.5; color: var(--reader-muted); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; margin-top: 3px; }
+.reader-identity img, .reader-identity-avatar { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; object-fit: cover; }
+.reader-identity-avatar { display: grid; place-items: center; background: var(--reader-accent); color: var(--reader-surface); font-weight: 700; }
+.reader-identity .reader-contacts { justify-content: flex-start; margin-top: 6px; gap: 6px; }
+.reader-identity .reader-contact { width: 44px; height: 44px; }
+.explore-selected { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.explore-selected:empty { display: none; }
+.explore-selected a, .explore-selected span { overflow-wrap: anywhere; padding: 8px 12px; border-radius: 12px; border: 1px solid currentColor; color: var(--reader-accent); }
+.reader-filter-dialog input { display: block; width: 100%; min-height: 48px; font-size: 16px; background: inherit; border: 1px solid currentColor; border-radius: 10px; padding: 10px; margin: 8px 0 16px; }
+.reader-filter-dialog .explore-options { max-height: none; }
+.reader-filter-dialog .explore-filter-row { margin: 18px 0; }
+.explore-show-results { position: sticky; bottom: -20px; background: var(--reader-surface); width: 100%; }
+@media (min-width: 761px) and (max-width: 1023px) {
+  .reader-main { margin-left: 100px; width: calc(100% - 116px); }
+}
+@media (max-width: 760px) {
+  :root { --reader-nav-height: 64px; --reader-bottom-space: calc(var(--reader-nav-height) + env(safe-area-inset-bottom, 0px) + 20px); }
+  body:has(.reader-mobile-nav), body:has(.reader-dock) { padding-bottom: 0; }
+  .reader-main { width: 100%; max-width: 100%; margin: 0; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) var(--reader-bottom-space) max(16px, env(safe-area-inset-left, 0px)); }
+  .reader-shell { color: var(--reader-text); }
+  .reader-main:not(.reader-main--article) { background: var(--reader-surface); min-height: 100vh; min-height: 100dvh; }
+  .reader-mobile-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: fixed; z-index: 40; bottom: 0; left: 0; right: 0; height: calc(var(--reader-nav-height) + env(safe-area-inset-bottom, 0px)); padding: 4px env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); background: var(--reader-surface, #141837); color: var(--reader-muted, #a0aec0); isolation: isolate; opacity: 1; -webkit-backdrop-filter: none; backdrop-filter: none; border-top: 1px solid #80899b55; box-shadow: 0 -5px 25px #00000015; }
+  .reader-mobile-nav > a, .reader-mobile-nav > button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 44px; gap: 3px; font-size: 11px; border: 0; background: none; color: inherit; }
+  .reader-mobile-nav .active, .reader-mobile-nav [aria-expanded="true"] { color: var(--reader-accent); font-weight: 700; }
+  [data-reader-keyboard="true"] .reader-mobile-nav { display: none; }
+  .reader-main .glass-card, .reader-modal .glass-card { background: var(--reader-surface); color: var(--reader-text); backdrop-filter: none; }
+  .reader-main:not(.reader-main--article) .text-white, .reader-modal .text-white { color: var(--reader-text); }
+  .reader-main:not(.reader-main--article) [class*="text-dark-"], .reader-modal [class*="text-dark-"] { color: var(--reader-muted); }
+  .reader-main:not(.reader-main--article) .text-gold, .reader-modal .text-gold, .reader-main:not(.reader-main--article) a { color: var(--reader-accent); }
+  .reader-main:not(.reader-main--article) mark, .reader-modal mark { color: var(--reader-accent); background: transparent; text-decoration: underline; font-weight: 700; }
+  .reader-main:not(.reader-main--article) input, .reader-modal input, .reader-modal textarea { font-size: 16px; color: var(--reader-text); background: var(--reader-surface); }
+  .reader-main:not(.reader-main--article) input::placeholder, .reader-modal input::placeholder { color: var(--reader-muted); opacity: .85; }
+  .reader-modal { width: calc(100% - 16px); max-height: calc(var(--reader-visible-height, 100dvh) - env(safe-area-inset-top, 0px) - 16px); padding: 16px; border-radius: 18px; }
+  .reader-modal-heading { top: -16px; }
+  .reader-modal.reader-search { height: calc(var(--reader-visible-height, 100dvh) - 24px); max-width: none; }
+  .reader-modal .reader-list-results { overflow: visible; }
+  .reader-wechat-dialog { width: calc(100% - 24px); max-height: calc(var(--reader-visible-height, 100dvh) - 24px); overflow-y: auto; overflow-wrap: anywhere; }
+  .reader-wechat-dialog img { max-height: 42vh; width: auto; max-width: 100%; object-fit: contain; }
+  .explore-heading { align-items: flex-start; margin-bottom: 14px; gap: 12px; }
+  .explore-heading h1 { font-size: 24px; }
+  .explore-heading p { font-size: 13px; color: var(--reader-muted); margin-top: 6px; }
+  .explore-heading .explore-reset { white-space: nowrap; min-height: 44px; display: flex; align-items: center; }
+  .explore-filters { background: var(--reader-surface); padding: 12px; margin-bottom: 16px; gap: 10px; }
+  .explore-filter-row { display: block; }
+  .explore-filter-label { display: block; margin-bottom: 5px; font-size: 12px; color: var(--reader-muted); }
+  .explore-options { gap: 5px; }
+  .explore-options a { min-height: 32px; padding: 5px 8px; font-size: 12px; max-width: 100%; overflow-wrap: anywhere; color: var(--reader-muted); }
+  .explore-options a.selected { color: var(--reader-accent); border-color: currentColor; }
+  .explore-options small { color: inherit; }
+  .explore-categories-compact .explore-options { max-height: 69px; overflow: hidden; }
+  .reader-filter-dialog .explore-options a { min-height: 44px; }
+  .explore-open-filters { font-size: 13px; min-height: 44px; margin-top: 8px; width: 100%; }
+  .reader-main--article { padding-top: max(12px, env(safe-area-inset-top, 0px)); }
+  .reader-main footer { margin-bottom: var(--reader-bottom-space); }
+  .reader-shell > footer { padding-bottom: var(--reader-bottom-space); background: var(--reader-surface); color: var(--reader-muted); }
+}
+/* 旧桌面搜索样式保留宽度，本轮内容表面统一使用已校验的局部令牌。 */
+.reader-modal.reader-search { background: var(--reader-surface); color: var(--reader-text); }
+.reader-modal { margin: auto; }
+@media (max-width: 760px) {
+  .reader-main .reader-identity { margin-bottom: 8px; }
+  .reader-main .reader-list-heading { margin-bottom: 8px; }
+  .explore-filters { display: grid; gap: 8px; padding-block: 10px; }
+  .explore-filters .explore-filter-row { display: flex; gap: 8px; align-items: start; }
+  .explore-filters .explore-filter-label { flex: 0 0 26px; padding-top: 6px; margin: 0; }
+  .explore-filters .explore-options { flex: 1; min-width: 0; }
+  .explore-filters .explore-filter-row:nth-child(2) .explore-options { max-height: 69px; overflow: hidden; }
+  .explore-open-filters { margin: 0; }
+}
+.reader-wechat-dialog { background: var(--reader-surface, #1b2230); color: var(--reader-text, #f4f6fc); }
+.reader-wechat-dialog .reader-wechat-hint { color: var(--reader-muted, #c3ccdc); }
+.reader-wechat-dialog button { color: inherit; }
+.reader-shell .reader-contact.is-enabled { color: var(--reader-accent); }
+@media (max-width: 760px) {
+  .reader-list-search .glass-card, .reader-filter-dialog input { border-color: var(--reader-muted); }
+}
+.reader-modal a, .reader-shell .explore-open-filters { color: var(--reader-accent); }
+@media (max-width: 760px) {
+  /* 主题异步到达时表面与文字同时切换，避免旧深色底与新深色字短暂叠加。 */
+  .reader-shell .glass-card, .reader-shell .article-card h2 { transition: none; }
+}
+@media (max-width: 760px) {
+  .reader-shell .reader-contact { transition: none; }
+  .reader-shell .glass-card { box-shadow: none; }
+  .reader-shell .glass-card-hover:hover { transform: none; box-shadow: none; }
+}
+
+@media (max-width: 760px) {
+  /* 翻页定位结果后仍保留搜索入口，标题和输入共享模态的单一滚动区。 */
+  .reader-search .reader-list-search { position: sticky; top: 64px; z-index: 5; background: var(--reader-surface); padding-bottom: 8px; }
+  .reader-search .reader-list-results { scroll-margin-top: 132px; }
+}
+@media (max-width: 760px) {
+  .reader-search .reader-list-search { box-shadow: 0 -16px 0 var(--reader-surface); }
+}
+
+@media (max-width: 760px) {
+  /* 阅读底栏与正文使用同一独立实色，连同安全区一起遮住滚入其下的文字。 */
+  .reader-shell--reading .reader-mobile-nav { background: #12171f; color: #b3bfd0; }
+  .reader-shell--reading .reader-mobile-nav :is(.active, [aria-expanded="true"]) { color: #9bc6ff; }
+}
+
+@media (max-width: 760px) {
+  /* 手机首页用原背景的一小段裁切保留个性，文章和底栏继续使用不透明表面。 */
+  .reader-identity--home {
+    position: relative;
+    isolation: isolate;
+    margin-top: calc(-1 * max(16px, env(safe-area-inset-top, 0px)));
+    margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+    margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+    background: #12171f;
+    color: #ffffff;
+    overflow: hidden;
+  }
+  .reader-identity--home::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image: linear-gradient(90deg, #0c121fe6, #0c121fb8), var(--bg-image, none);
+    background-size: cover;
+    background-position: center, var(--bg-position, center);
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+  .reader-identity--home::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 16px;
+    z-index: -1;
+    background: linear-gradient(transparent, var(--reader-surface, #141837));
+    pointer-events: none;
+  }
+  .reader-identity--home .reader-identity-line { align-items: center; gap: 12px; min-width: 0; }
+  .reader-identity--home .reader-identity-copy { flex: 1; min-width: 0; }
+  .reader-identity--home strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; overflow-wrap: anywhere; font-size: 18px; line-height: 25px; }
+  .reader-identity--home .reader-identity-line p { -webkit-line-clamp: 2; font-size: 13px; line-height: 20px; max-width: 100%; overflow-wrap: anywhere; color: #e1e7f0; }
+  .reader-main .reader-identity--home .reader-identity-about { display: inline-flex; flex: 0 0 auto; gap: 4px; align-items: center; justify-content: center; min-width: 56px; min-height: 44px; font-size: 12px; color: #f4f6fc; align-self: flex-start; }
+  .reader-about p { overflow-wrap: anywhere; line-height: 1.8; }
+  .reader-identity--home .reader-identity-about:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
+}

@@ -1,7 +1,7 @@
-import { Home, FolderOpen, UserRound, Search, LogIn, PenLine, LayoutDashboard } from 'lucide-react'
+import { Home, FolderOpen, UserRound, Search, LogIn, PenLine, LayoutDashboard, MoreHorizontal } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { apiFetch } from './utils/api'
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react'
+import React, { useEffect, useState, useRef, useMemo, lazy, Suspense } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -11,7 +11,8 @@ import {
   useParams,
   Route,
   Routes,
-  useLocation
+  useLocation,
+  useNavigate
 } from 'react-router-dom'
 import Footer from './components/layout/Footer'
 import Sidebar from './components/layout/Sidebar'
@@ -22,6 +23,11 @@ import GridOverlay from './components/background/GridOverlay'
 import PixelSnow from './components/background/PixelSnow'
 import SplashCursor from './components/background/SplashCursor'
 import { useSeo } from './utils/seo'
+import ContactLinks, { WechatDialog } from './components/layout/ContactLinks'
+import { ReaderDialog, ReaderIdentity, ReaderMore, useReaderKeyboard } from './components/layout/ReaderMobile'
+import { useMobileReader } from './utils/readerViewport'
+import { ReaderScrollMemory, searchSources } from './utils/readerNavigation'
+import { readerPalette } from './utils/readerPalette'
 
 const ArticleDetail = lazy(/* 按需加载ArticleDetail页面模块。 */ () => import('./components/blog/ArticleDetail'))
 
@@ -60,17 +66,42 @@ function Layout() {
   const { settings } = useSettings()
   const { theme } = useTheme()
   const location = useLocation()
-  const [searchOpen, setSearchOpen] = useState(false)
-  useEffect(/* 离开当前文章时关闭搜索弹层。 */ () => setSearchOpen(false), [location.pathname])
+  const paletteKey = JSON.stringify(theme?.colors || {})
+  const palette = useMemo(/* 仅配色变化时计算局部可读色，搜索与弹层状态不重建颜色解析画布。 */ () => readerPalette(theme), [paletteKey])
+  const navigate = useNavigate()
+  const mobile = useMobileReader()
+  const [overlay, setOverlay] = useState(null)
+  useReaderKeyboard(mobile)
+  useEffect(/* 路由历史恢复搜索面板；其他导航关闭旧模态。 */ () => {
+    setOverlay(location.state?.readerSearch ? { type: 'search', ...location.state.readerSearch } : null)
+  }, [location.key])
+  /** 关闭弹层时清理临时历史状态，不新增空历史项。 */
+  function closeOverlay() {
+    const restoreY = overlay?.articleScrollY
+    setOverlay(null)
+    if (Number.isFinite(restoreY)) requestAnimationFrame(/* 弹层释放滚动锁后恢复原文章坐标。 */ () => window.scrollTo(0, restoreY))
+    if (location.state?.readerSearch) {
+      const state = { ...location.state, readerRestoreY: restoreY, readerRestoreRequest: crypto.randomUUID() }
+      delete state.readerSearch
+      navigate(location.pathname + location.search, { replace: true, state })
+    }
+  }
+  /** 更多到公众号通过同一个状态切换，关闭后返回更多面板。 */
+  function openWechat(data) {
+    setOverlay({ type: 'wechat', ...data, returnToMore: overlay?.type === 'more' })
+  }
+  /** 有列表时原地聚焦，否则在当前文章或关于页打开搜索。 */
+  function openSearch() {
+    if (hasSearch) {
+      document.querySelector('.reader-article-list input[aria-label="搜索文章"]')?.focus({ preventScroll: false })
+    } else setOverlay({ type: 'search' })
+  }
   useSeo({
     title: settings.title,
     description: settings.description,
     image: settings.avatar,
     enabled: !location.pathname.startsWith('/article/')
   })
-  useEffect(/* 页面导航后将阅读位置返回顶部。 */ () => {
-    window.scrollTo(0, 0)
-  }, [location.pathname])
   const [reducedMotion, setReducedMotion] = useState(false)
   useEffect(/* 监听系统减少动效偏好。 */ () => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
@@ -87,8 +118,9 @@ function Layout() {
   const isReading = location.pathname.startsWith('/article/')
   const effects = theme?.effects || {}
   return (
-    <>
-      {!reducedMotion && !isReading && (
+    <div className={`reader-shell${isReading ? ' reader-shell--reading' : ''}`} style={palette}>
+      <ReaderScrollMemory />
+      {!mobile && !reducedMotion && !isReading && (
         <div aria-hidden="true" data-reader-effects>
           {effects.gridOverlay && <GridOverlay />}
           {effects.pixelSnow && <PixelSnow />}
@@ -98,7 +130,7 @@ function Layout() {
       <a href="#main" className="skip-link">
         跳到正文
       </a>
-      <aside className="reader-dock" aria-label="站点导航">
+      {!mobile && <aside className="reader-dock" aria-label="站点导航">
         <Link className="dock-brand" to="/" aria-label={settings.title + ' · 首页'} title={settings.title}>
           {settings.title?.slice(0, 1) || 'B'}
         </Link>
@@ -116,11 +148,14 @@ function Layout() {
         </nav>
         <div className="dock-tools">
           {hasSearch ? (
-            <Link className="dock-link" to={searchTarget}>
+            <Link className="dock-link" to={searchTarget} onClick={/* 普通搜索只聚焦当前输入，不为重复意图新增历史。 */ (event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault(); openSearch()
+            }}>
               <Search size={20} aria-hidden="true" /><span>搜索</span>
             </Link>
           ) : (
-            <button type="button" className="dock-link" aria-haspopup="dialog" onClick={/* 无搜索框的阅读页面打开弹层，保留原地址。 */ () => setSearchOpen(true)}>
+            <button type="button" className="dock-link" aria-haspopup="dialog" onClick={/* 无搜索框的阅读页面打开弹层，保留原地址。 */ openSearch}>
               <Search size={20} aria-hidden="true" /><span>搜索</span>
             </button>
           )}
@@ -141,17 +176,23 @@ function Layout() {
             )
           )}
         </div>
-      </aside>
+      </aside>}
+      {mobile && <nav className="reader-mobile-nav" aria-label="手机导航">
+        <NavLink end to="/"><Home aria-hidden="true" size={21} /><span>首页</span></NavLink>
+        <NavLink to="/explore" className={/^\/(category|tag)\//.test(location.pathname) ? 'active' : undefined}><FolderOpen aria-hidden="true" size={21} /><span>探索</span></NavLink>
+        <button type="button" onClick={openSearch} aria-haspopup={!hasSearch ? 'dialog' : undefined}><Search aria-hidden="true" size={21} /><span>搜索</span></button>
+        <button type="button" data-reader-more aria-haspopup="dialog" aria-expanded={overlay?.type === 'more'} onClick={/* 显式记录手机触发焦点，兼容 Safari 点击按钮不自动聚焦的行为。 */ (event) => { event.currentTarget.focus({ preventScroll: true }); setOverlay({ type: 'more' }) }}><MoreHorizontal aria-hidden="true" size={21} /><span>更多</span></button>
+      </nav>}
       <main id="main" className={`reader-main max-w-6xl mx-auto px-4 py-8 ${isReading ? 'reader-main--article' : ''}`}>
         <Routes>
-          <Route path="/" element={<Listing />} />
+          <Route path="/" element={<Listing mobile={mobile} />} />
           <Route path="/category/:name" element={<Directory />} />
           <Route path="/tag/:name" element={<Directory />} />
           <Route
             path="/article/:slug"
             element={
               <Suspense fallback={<p role="status">正在加载文章…</p>}>
-                <ArticleDetail />
+                <ArticleDetail key={location.pathname} />
               </Suspense>
             }
           />
@@ -161,9 +202,10 @@ function Layout() {
           <Route
             path="/about"
             element={
-              <section className="glass-card p-8">
+              <section className="reader-about glass-card p-8">
                 <h1>关于 {settings.author}</h1>
                 <p>{settings.bio || settings.description}</p>
+                <ContactLinks settings={settings} onWechatOpen={openWechat} />
               </section>
             }
           />
@@ -178,37 +220,56 @@ function Layout() {
           />
         </Routes>
       </main>
-      {searchOpen && <ReaderSearch onClose={/* 关闭弹层并由原生对话框恢复触发焦点。 */ () => setSearchOpen(false)} />}
+      {overlay?.type === 'search' && <ReaderSearch key={location.key} initial={overlay} onClose={closeOverlay} />}
+      {overlay?.type === 'more' && <ReaderMore settings={settings} user={user} location={location} onClose={closeOverlay} onWechatOpen={openWechat} />}
+      {overlay?.type === 'wechat' && <WechatDialog {...overlay} onClose={/* 从更多打开的公众号返回更多，其余直接关闭。 */ () => setOverlay(overlay.returnToMore ? { type: 'more' } : null)} />}
       {settings.footer && <Footer settings={settings} />}
-    </>
+    </div>
   )
 }
-/** 用原生模态对话框搜索全站文章，锁住背景滚动并保留阅读位置。 */
-function ReaderSearch({ onClose }) {
+/** 搜索保留在当前地址；打开结果前保存面板与原文章阅读位置。 */
+function ReaderSearch({ onClose, initial = {} }) {
   const dialogRef = useRef(null)
-  useEffect(/* 打开原生模态框，卸载时恢复滚动样式及触发控件焦点。 */ () => {
-    const dialog = dialogRef.current
-    const trigger = document.activeElement
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    dialog.showModal()
-    return /* 释放模态层及背景滚动锁，不移动文章阅读位置。 */ () => {
-      dialog.close()
-      document.body.style.overflow = overflow
-      trigger?.focus({ preventScroll: true })
-    }
+  const location = useLocation()
+  const navigate = useNavigate()
+  const stateRef = useRef({ query: initial.query || '', page: initial.page || 1 })
+  const readingY = useRef(initial.articleScrollY ?? window.scrollY)
+  useEffect(/* 异步列表恢复后还原搜索面板内部滚动。 */ () => {
+    const observer = new MutationObserver(/* 列表已就绪才恢复内部结果位置。 */ () => {
+      if (dialogRef.current?.querySelector('[data-list-ready="true"]')) {
+        dialogRef.current.scrollTop = initial.scrollTop || 0
+        observer.disconnect()
+      }
+    })
+    observer.observe(dialogRef.current, { childList: true, subtree: true })
+    return /* 搜索关闭后不再观察旧结果。 */ () => observer.disconnect()
   }, [])
-  return (
-    <dialog ref={dialogRef} className="reader-search" aria-labelledby="reader-search-title" onCancel={/* Esc 交由原生对话框触发关闭状态。 */ onClose} onClick={/* 点击文章结果后关闭弹层，包括打开当前文章。 */ (event) => {
-      if (event.target.closest('a')) onClose()
-    }}>
-      <div className="reader-search-heading"><h2 id="reader-search-title">搜索文章</h2><button type="button" onClick={onClose} aria-label="关闭搜索">关闭 · Esc</button></div>
-      <ArticleList showCategories={false} filterCategory="" filterTag="" autoFocusSearch />
-    </dialog>
-  )
+  return <ReaderDialog title="搜索文章" className="reader-search" dialogRef={dialogRef} onClose={onClose} onClickCapture={/* 接管普通文章导航以保存唯一、可信的同会话返回上下文。 */ (event) => {
+    const link = event.target.closest('a')
+    if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return
+    const url = new URL(link.href)
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+    const path = url.pathname.slice(base.length)
+    if (url.origin !== window.location.origin || !path.startsWith('/article/')) { onClose(); return }
+    event.preventDefault(); event.stopPropagation()
+    const sourceId = crypto.randomUUID()
+    searchSources.add(sourceId)
+    if (searchSources.size > 20) searchSources.delete(searchSources.values().next().value)
+    const snapshot = { ...stateRef.current, scrollTop: dialogRef.current.scrollTop, articleScrollY: readingY.current, sourceId }
+    const sourceState = { ...location.state, readerSearch: snapshot }
+    delete sourceState.readerRestoreY
+    delete sourceState.readerRestoreRequest
+    navigate(location.pathname + location.search, { replace: true, state: sourceState })
+    const fallback = new URLSearchParams()
+    if (snapshot.query) fallback.set('q', snapshot.query)
+    if (snapshot.page > 1) fallback.set('page', snapshot.page)
+    navigate(path + url.search, { state: { readerReturn: { sourceId, url: `/explore${fallback.size ? `?${fallback}` : ''}` } } })
+  }}>
+    <ArticleList showCategories={false} filterCategory="" filterTag="" autoFocusSearch syncUrl={false} initialQuery={initial.query || ''} initialPage={initial.page || 1} onStateChange={/* 结果状态仅保存在面板，不污染原文章地址。 */ (state) => { stateRef.current = state }} />
+  </ReaderDialog>
 }
 /** 组合文章列表与站点侧栏。 */
-function Listing() {
+function Listing({ mobile }) {
   const { settings } = useSettings()
   const [total, setTotal] = useState(0)
   return (
@@ -216,9 +277,10 @@ function Listing() {
       className={`flex flex-col lg:flex-row gap-8 ${settings.sidebar === 'left' ? 'lg:flex-row-reverse' : ''}`}
     >
       <div className="flex-1 min-w-0">
+        {mobile && <ReaderIdentity settings={settings} home />}
         <ArticleList perPage={settings.perpage} onTotal={setTotal} />
       </div>
-      {settings.sidebar !== 'hidden' && (
+      {!mobile && settings.sidebar !== 'hidden' && (
         <div className="w-full lg:w-80">
           <Sidebar total={total} />
         </div>
@@ -229,6 +291,9 @@ function Listing() {
 /** 在一个页面组合分类、标签筛选与文章结果，地址保存筛选条件。 */
 function Directory() {
   const { settings } = useSettings()
+  const mobile = useMobileReader()
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [candidate, setCandidate] = useState('')
   const [params] = useSearchParams()
   const { name } = useParams()
   const location = useLocation()
@@ -259,39 +324,58 @@ function Directory() {
     const next = new URLSearchParams(params)
     if (category) next.set('category', category)
     if (tag) next.set('tag', tag)
+    next.delete('page')
+    next.delete('focus')
     if (value) next.set(key, value)
     else next.delete(key)
     return { pathname: '/explore', search: next.toString() }
+  }
+  /** 清除分类和标签时仍保留读者的搜索词。 */
+  function clearFilters() {
+    const next = new URLSearchParams(params)
+    for (const key of ['category', 'tag', 'page', 'focus']) next.delete(key)
+    return { pathname: '/explore', search: next.toString() }
+  }
+  /** 使用同一目录渲染紧凑候选与完整面板，已选条件始终另行呈现。 */
+  function filterRows(expanded = false) {
+    return [['categories', '分类', 'category', category], ['tags', '标签', 'tag', tag]].map(/* 两类目录共享筛选地址，避免丢失另一个条件与搜索词。 */ ([kind, label, key, selected]) => {
+      const all = catalog[kind]
+      const options = expanded ? all.filter(/* 面板只在本地查找候选，不请求文章。 */ (item) => item.name.toLocaleLowerCase().includes(candidate.toLocaleLowerCase())) : mobile ? all.slice(0, key === 'tag' ? 8 : 6) : all
+      return <div className={`explore-filter-row ${key === 'category' && !expanded ? 'explore-categories-compact' : ''}`} key={kind} role="group" aria-label={label}>
+        <span className="explore-filter-label">{label}</span>
+        <div className="explore-options">
+          <Link className={!selected ? 'selected' : ''} aria-current={!selected ? 'true' : undefined} to={filterUrl(key, '')}>全部</Link>
+          {options.map(/* 用轻量选项呈现真实目录及文章数量。 */ (item) => <Link key={item.id || item.name} className={selected === item.name ? 'selected' : ''} aria-current={selected === item.name ? 'true' : undefined} to={filterUrl(key, item.name)}>{key === 'tag' ? '# ' : ''}{item.name}<small>{item.count || 0}</small></Link>)}
+          {!all.length && <span>暂无{label}</span>}
+          {expanded && all.length > 0 && !options.length && <span>没有匹配的{label}</span>}
+        </div>
+      </div>
+    })
   }
   return (
     <section className="explore-page">
       <header className="explore-heading">
         <div><h1>探索文章</h1><p>按分类寻找方向，用标签细化兴趣。</p></div>
-        {(category || tag) && <Link className="explore-reset" to="/explore">清除筛选</Link>}
+        {(category || tag) && <Link className="explore-reset" to={clearFilters()}>清除筛选</Link>}
       </header>
+      <div className="explore-selected" aria-label="已选条件">
+        {category && <Link to={filterUrl('category', '')}>分类：{category} ×</Link>}
+        {tag && <Link to={filterUrl('tag', '')}>标签：{tag} ×</Link>}
+      </div>
       <section className="explore-filters" aria-label="文章筛选" aria-busy={status === 'loading'}>
-        {status === 'loading' ? <p role="status">正在加载筛选项…</p> : status === 'error' ? (
-          <div role="alert">筛选项加载失败。<button onClick={/* 重新加载目录，不改变已选条件。 */ () => setRetry(retry + 1)}>重试</button></div>
-        ) : (
-          [['categories', '分类', 'category', category], ['tags', '标签', 'tag', tag]].map(/* 两类筛选各占一行，选中状态直接来源于地址。 */ ([kind, label, key, selected]) => (
-            <div className="explore-filter-row" key={kind} role="group" aria-label={label}>
-              <span className="explore-filter-label">{label}</span>
-              <div className="explore-options">
-                <Link className={!selected ? 'selected' : ''} aria-current={!selected ? 'true' : undefined} to={filterUrl(key, '')}>全部</Link>
-                {catalog[kind].map(/* 呈现可换行的轻量选项，避免每个主题占一张大卡片。 */ (item) => (
-                  <Link key={item.id || item.name} className={selected === item.name ? 'selected' : ''} aria-current={selected === item.name ? 'true' : undefined} to={filterUrl(key, item.name)}>
-                    {key === 'tag' ? '# ' : ''}{item.name}<small>{item.count || 0}</small>
-                  </Link>
-                ))}
-                {selected && !catalog[kind].some(/* 保留旧链接或已删除目录的筛选状态，允许随时清除。 */ (item) => item.name === selected) && <span className="explore-unknown">当前选择：{selected}</span>}
-                {!catalog[kind].length && <span className="explore-unknown">暂无{label}</span>}
-              </div>
-            </div>
-          ))
-        )}
+        {status === 'loading' ? <p role="status">正在加载筛选项…</p> : status === 'error' ? <div role="alert">筛选项加载失败。<button type="button" onClick={/* 重新加载目录并保留条件。 */ () => setRetry(retry + 1)}>重试</button></div> : <>
+          {filterRows()}
+          {mobile && <button className="explore-open-filters" type="button" aria-haspopup="dialog" onClick={/* 打开完整目录，本地检索不改变当前结果。 */ () => { setCandidate(''); setFilterOpen(true) }}>筛选 · 全部标签（{catalog.tags.length}）</button>}
+        </>}
       </section>
+      {filterOpen && <ReaderDialog title="筛选文章" className="reader-filter-dialog" onClose={/* 关闭后返回筛选触发位置。 */ () => setFilterOpen(false)}>
+        <label>查找分类或标签<input type="search" value={candidate} onChange={/* 本地候选过滤不发起网络请求。 */ (event) => setCandidate(event.target.value)} /></label>
+        <div className="explore-selected">{category && <span>分类：{category}</span>}{tag && <span>标签：{tag}</span>}</div>
+        {filterRows(true)}
+        <button type="button" className="explore-show-results" onClick={/* 条件已同步地址，完成后回到结果区。 */ () => { setFilterOpen(false); document.querySelector('.explore-results')?.scrollIntoView({ block: 'start' }) }}>查看文章结果</button>
+      </ReaderDialog>}
       <div className="explore-results" aria-label="文章结果">
-        <ArticleList key={`${category}:${tag}`} perPage={settings.perpage} filterCategory={category} filterTag={tag} showCategories={false} />
+        <ArticleList perPage={settings.perpage} filterCategory={category} filterTag={tag} showCategories={false} />
       </div>
     </section>
   )

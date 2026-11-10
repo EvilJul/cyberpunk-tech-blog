@@ -1,127 +1,64 @@
-import { useLocation } from 'react-router-dom'
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Search, X } from 'lucide-react'
+import { useMobileReader } from '../../utils/readerViewport'
 
-/** 渲染支持输入法、防抖回调和弹层自动聚焦的搜索框。 */
-export default function SearchBar({ onSearch, onComposingChange, autoFocus = false }) {
-  const location = useLocation()
-  useEffect(() => {
-    if (new URLSearchParams(location.search).get('focus') === 'search')
-      inputRef.current?.focus()
-  }, [location.key])
-  const [query, setQuery] = useState('')
+/** 保持受控输入与焦点稳定；组合输入状态交由列表统一防抖。 */
+export default function SearchBar({ query, onSearch, onComposingChange, autoFocus = false, inputName = 'reader-search', focusRequest = false }) {
+  const [localQuery, setLocalQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef(null)
-  const isComposing = useRef(false)
+  const composing = useRef(false)
+  const isMobile = useMobileReader()
+  const value = query ?? localQuery
 
-  const handleClear = useCallback(() => {
-    setQuery('')
-    if (onSearch) {
-      onSearch('')
-    }
+  /** 更新受控值，同时兼容独立使用时的内部输入。 */
+  function changeValue(next) {
+    setLocalQuery(next)
+    onSearch?.(next)
+  }
+  /** 清空立即提交并把焦点保留在输入框。 */
+  function clear() {
+    composing.current = false
+    onComposingChange?.(false)
+    changeValue('')
     inputRef.current?.focus()
-  }, [onSearch])
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (
-        e.key === '/' &&
-        !focused &&
-        document.activeElement?.tagName !== 'INPUT' &&
-        document.activeElement?.tagName !== 'TEXTAREA'
-      ) {
-        e.preventDefault()
+  }
+  useEffect(/* 只响应明确的聚焦意图，不随结果更新抢焦点。 */ () => {
+    if (autoFocus || focusRequest) inputRef.current?.focus()
+  }, [autoFocus, focusRequest])
+  useEffect(/* 输入区以外的斜杠快捷键聚焦搜索。 */ () => {
+    /** 避免覆盖可编辑元素中的正常键入。 */
+    function handleShortcut(event) {
+      const target = document.activeElement
+      if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName) && !target?.isContentEditable) {
+        event.preventDefault()
         inputRef.current?.focus()
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [focused])
-
-  const handleInputKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Escape') {
-        if (query) {
-          e.preventDefault()
-          handleClear()
-        } else {
-          // query 可能因 React 状态不同步而为空，但 onSearch 仍需清空
-          if (onSearch) onSearch('')
-          inputRef.current?.blur()
-          setFocused(false)
-        }
-      }
-    },
-    [query, handleClear, onSearch]
-  )
-
-  const handleSubmit = useCallback(
-    (e) => {
-      e.preventDefault()
-      if (onSearch) onSearch(query)
-    },
-    [query, onSearch]
-  )
-
-  const handleChange = useCallback(
-    (e) => {
-      setQuery(e.target.value)
-      if (!isComposing.current && onSearch) {
-        onSearch(e.target.value)
-      }
-    },
-    [onSearch]
-  )
-
-  const handleCompositionStart = useCallback(() => {
-    isComposing.current = true
-    if (onComposingChange) onComposingChange(true)
-  }, [onComposingChange])
-
-  const handleCompositionEnd = useCallback(
-    (e) => {
-      isComposing.current = false
-      if (onComposingChange) onComposingChange(false)
-      if (onSearch) onSearch(e.target.value)
-    },
-    [onSearch, onComposingChange]
-  )
+    window.addEventListener('keydown', handleShortcut)
+    return /* 卸载时移除快捷键。 */ () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
 
   return (
-    <form onSubmit={handleSubmit} className="relative mb-6">
-      <div
-        className={`glass-card flex items-center gap-3 px-4 py-3 transition-all duration-300 ${
-          focused ? 'border-gold/30 shadow-lg shadow-gold/10' : ''
-        }`}
-      >
-        <Search size={18} className="text-dark-400 flex-shrink-0" />
-        <input
-          ref={inputRef}
-          autoFocus={autoFocus}
-          type="text"
-          placeholder="搜索文章... (按 / 聚焦)"
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleInputKeyDown}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className="flex-1 bg-transparent text-white placeholder-dark-400 focus:outline-none text-sm"
-        />
-        {query ? (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="text-dark-400 hover:text-gold transition-colors"
-          >
-            <X size={16} />
-          </button>
-        ) : (
-          <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-dark-500 bg-dark-800/50 rounded border border-dark-700/50">
-            /
-          </kbd>
-        )}
+    <form className="reader-list-search relative mb-6" onSubmit={/* 防止组合期间提交或刷新页面。 */ event => event.preventDefault()}>
+      <div className={`glass-card flex items-center gap-3 px-4 py-3 ${focused ? 'border-gold/30' : ''}`}>
+        <Search size={18} aria-hidden="true" className="text-dark-400 flex-shrink-0" />
+        <input ref={inputRef} name={inputName} aria-label="搜索文章" type="text"
+          placeholder={isMobile ? '搜索文章' : '搜索文章... (按 / 聚焦)'} value={value}
+          onChange={/* 每次输入都回传草稿，防抖由列表负责。 */ event => changeValue(event.target.value)}
+          onCompositionStart={/* 组合开始立即暂停已有防抖。 */ () => { composing.current = true; onComposingChange?.(true) }}
+          onCompositionEnd={/* 组合结束后再启动完整防抖周期。 */ event => { composing.current = false; onComposingChange?.(false); changeValue(event.currentTarget.value) }}
+          onKeyDown={/* 输入法使用 Escape 时不干扰候选词。 */ event => {
+            if (event.key === 'Escape' && !composing.current && !event.nativeEvent.isComposing) {
+              if (value) { event.preventDefault(); event.stopPropagation(); clear() }
+              else inputRef.current?.blur()
+            }
+          }}
+          onFocus={/* 标记输入焦点。 */ () => setFocused(true)}
+          onBlur={/* 清除焦点样式。 */ () => setFocused(false)}
+          className="min-w-0 flex-1 bg-transparent text-white placeholder-dark-400 focus:outline-none text-sm" />
+        {value ? <button type="button" aria-label="清除搜索" onClick={clear} className="reader-search-clear text-dark-400 hover:text-gold"><X size={16} aria-hidden="true" /></button>
+          : !isMobile && <kbd className="hidden sm:inline-flex text-xs text-dark-500">/</kbd>}
       </div>
     </form>
   )

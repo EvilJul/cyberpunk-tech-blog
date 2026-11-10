@@ -1,0 +1,20 @@
+/* 卡片样式独立于全局布局，整卡链接继续使用原有 stretched 伪元素。 */
+.article-card { min-width: 0; overflow-wrap: anywhere; }
+.article-card-meta { flex-wrap: wrap; }
+.article-card-meta svg { flex-shrink: 0; }
+.article-card-footer, .article-card-tags, .article-card-stats { min-width: 0; }
+.article-card-tags a { max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .article-card { padding: 16px; border-radius: 14px; }
+  .article-card h2 { font-size: 20px; line-height: 1.45; }
+  .article-card .article-card-title { -webkit-line-clamp: 2; }
+  .article-card-excerpt { font-size: 15px; line-height: 1.65; }
+  .article-card-snippet p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .article-card-reading-time { font-size: 14px; margin-bottom: 8px; }
+  .article-card-footer { flex-direction: column; align-items: stretch; gap: 8px; }
+  .article-card-stats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .article-card-stats > span { min-width: 0; overflow-wrap: anywhere; }
+  .article-card-stats button { min-width: 44px; min-height: 44px; max-width: 100%; padding: 8px; overflow-wrap: anywhere; }
+  .article-card-stats .article-card-read-cue { display: none; }
+  .article-card :is(a, button):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+}

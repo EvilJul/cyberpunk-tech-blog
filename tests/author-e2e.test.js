@@ -157,6 +157,7 @@ test(
       await page
         .getByLabel('标题', { exact: true })
         .fill('真实后端作者验收文章')
+      await page.locator('.studio-editor-advanced > summary').click()
       await page
         .getByLabel('文章地址', { exact: true })
         .fill('author-e2e-workflow')

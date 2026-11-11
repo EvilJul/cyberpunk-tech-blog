@@ -53,6 +53,7 @@ test('featured articles and covers work through studio and /blog/ reader', { tim
   // 编辑器封面路径通过真实媒体和草稿／发布接口验收。
   await writeFile(join(root, 'uploads', 'legacy-cover.png'), image)
   await page.goto(`${base}/blog/studio/editor/${articles[2].id}`)
+  await page.locator('.studio-cover-library > summary').click()
   await page.getByRole('button', { name: '选取封面：legacy-cover.png', exact: true }).click()
   await expect(page.getByAltText('文章封面预览', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '清除封面', exact: true }).click()

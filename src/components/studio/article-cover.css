@@ -1,10 +1,30 @@
-.studio-cover-field { min-width: 0; border-top: 1px solid var(--studio-border, #454545); padding-top: 12px; }
-.studio-cover-field p { font-size: 12px; overflow-wrap: anywhere; }
-.studio-cover-field h3 { margin: 0 0 8px; }
-.studio-cover-preview img { display: block; max-width: 100%; max-height: 180px; object-fit: contain; }
-.studio-cover-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; max-height: 360px; overflow-y: auto; }
-.studio-cover-grid button { min-width: 0; padding: 6px; text-align: left; }
-.studio-cover-grid button[aria-pressed="true"] { outline: 2px solid var(--studio-accent, #d6b36a); outline-offset: -2px; }
-.studio-cover-grid img { display: block; width: 100%; height: 70px; object-fit: cover; }
-.studio-cover-grid span { display: block; overflow-wrap: anywhere; font-size: 11px; }
-.studio-cover-field nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+/* 封面选择独立于通用按钮和属性表单布局，避免缩略图与长文件名互相挤压。 */
+.studio .studio-editor .studio-cover-field { min-width: 0; margin: 0 0 20px; padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--studio-border); }
+.studio .studio-editor .studio-cover-field h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.studio .studio-editor .studio-cover-field .studio-cover-hint { margin: 6px 0 10px; color: var(--studio-muted); font-size: 11px; line-height: 1.6; }
+.studio .studio-editor .studio-cover-preview, .studio .studio-editor .studio-cover-empty { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1px dashed var(--studio-border); border-radius: 10px; background: var(--studio-bg); }
+.studio .studio-editor .studio-cover-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.studio .studio-editor .studio-cover-empty { flex-direction: column; gap: 9px; color: var(--studio-muted); font-size: 12px; }
+.studio .studio-editor .studio-cover-empty > span { padding-inline: 12px; text-align: center; }
+.studio .studio-editor .studio-cover-actions { display: flex; align-items: stretch; gap: 8px; margin-top: 10px; }
+.studio .studio-editor label.studio-cover-upload { position: relative; display: flex; flex: 1; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 38px; margin: 0; border: 1px solid var(--studio-border); border-radius: 8px; background: var(--studio-hover); color: var(--studio-text); cursor: pointer; font-size: 12px; }
+.studio .studio-editor .studio-cover-upload:has(input:disabled) { opacity: .5; cursor: wait; }
+.studio .studio-editor .studio-cover-actions > button { display: grid; place-items: center; width: 38px; min-width: 38px; padding: 0; margin: 0; border-radius: 8px; color: var(--studio-muted); }
+.studio .studio-editor .studio-cover-upload input[type='file'] { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+.studio .studio-editor .studio-cover-upload:focus-within { outline: 2px solid var(--studio-accent); outline-offset: 2px; }
+.studio .studio-editor .studio-cover-library { min-width: 0; }
+.studio .studio-editor .studio-cover-library > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; color: var(--studio-text); font-size: 12px; cursor: pointer; }
+.studio .studio-editor .studio-cover-library > summary::after { content: '＋'; color: var(--studio-muted); }
+.studio .studio-editor .studio-cover-library[open] > summary::after { content: '−'; }
+.studio .studio-editor .studio-cover-library > summary > span { margin-left: auto; color: var(--studio-muted); font-size: 11px; }
+.studio .studio-editor .studio-cover-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0; max-height: 224px; overflow-y: auto; overflow-x: hidden; }
+.studio .studio-editor .studio-cover-grid > button { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; width: 100%; height: auto; margin: 0; padding: 5px; text-align: left; border: 1px solid var(--studio-border); border-radius: 8px; background: var(--studio-bg); }
+.studio .studio-editor .studio-cover-grid > button[aria-pressed='true'] { border-color: var(--studio-accent); box-shadow: inset 0 0 0 1px var(--studio-accent); }
+.studio .studio-editor .studio-cover-grid img { display: block; width: 100%; aspect-ratio: 16 / 10; height: auto; object-fit: cover; border-radius: 4px; }
+.studio .studio-editor .studio-cover-grid button > span { display: block; min-width: 0; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 10px; line-height: 1.4; color: var(--studio-muted); }
+.studio .studio-editor .studio-cover-selected { position: absolute; top: 8px; right: 8px; padding: 2px; box-sizing: content-box; border-radius: 50%; color: var(--studio-bg); background: var(--studio-accent); }
+.studio .studio-editor .studio-cover-field nav { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 10px; color: var(--studio-muted); }
+.studio .studio-editor .studio-cover-field nav button { min-width: 0; padding: 5px; font-size: 11px; }
+@media (max-width: 767px) {
+  .studio .studio-editor .studio-cover-actions > button, .studio .studio-editor label.studio-cover-upload { min-height: 44px; }
+}

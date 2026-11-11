@@ -1,3 +1,4 @@
+import { ImagePlus, Upload, Trash2, Check } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { studioApi } from '../../utils/studioApi'
 import { apiUrl } from '../../utils/api'
@@ -15,7 +16,7 @@ function CoverImage({ url, alt }) {
     onError={/* 隐藏损坏图片并提供文字反馈。 */ () => setBroken(true)} />
 }
 
-/** 从已有媒体或上传图片选择封面；只回填草稿字段，不主动保存或发布。 */
+/** 以封面预览和折叠媒体库选择图片；仅回填草稿字段，不主动保存或发布。 */
 export default function ArticleCoverField({ value, currentId, currentUrl, disabled, onChange, onBusy }) {
   const [items, setItems] = useState([])
   const [offset, setOffset] = useState(0)
@@ -117,12 +118,11 @@ export default function ArticleCoverField({ value, currentId, currentUrl, disabl
   const url = value ? selectedMedia?.url || (value === currentId ? currentUrl : '') : ''
   return <section className="studio-cover-field" aria-label="文章封面" aria-busy={uploading}>
     <h3>文章封面</h3>
-    <p>保存草稿仅更新工作副本，发布后公开封面才会改变。上传文件后可通过地址访问。</p>
+    <p className="studio-cover-hint">用于文章列表与首页推荐，发布后更新。</p>
     {url ? <div className="studio-cover-preview"><CoverImage key={url} url={url} alt="文章封面预览" /></div>
-      : <p>{value ? '当前封面预览暂不可用，可重新选择或清除。' : '尚未选择封面'}</p>}
-    <button type="button" aria-label="清除封面" disabled={disabled || uploading || !value}
-      onClick={/* 清空草稿封面，保存前保留服务端公开封面。 */ () => { setSelected(null); onChange(null) }}>清除封面</button>
-    <label>上传封面
+      : <div className="studio-cover-empty"><ImagePlus size={28} aria-hidden="true" /><span>{value ? '当前封面预览暂不可用，可重新选择或清除。' : '尚未选择封面'}</span></div>}
+    <div className="studio-cover-actions">
+    <label className="studio-cover-upload"><Upload size={15} aria-hidden="true" /><span>{url ? '更换封面' : '上传封面'}</span>
       <input type="file" aria-label="上传封面" accept="image/jpeg,image/png,image/webp,image/gif" disabled={disabled || uploading}
         onChange={/* 读取并重置文件输入，允许失败后重选同一文件。 */ e => {
           const file = e.target.files?.[0]
@@ -130,15 +130,22 @@ export default function ArticleCoverField({ value, currentId, currentUrl, disabl
           upload(file)
         }} />
     </label>
+    <button type="button" aria-label="清除封面" title="清除封面" disabled={disabled || uploading || !value}
+      onClick={/* 清空草稿封面，保存前保留服务端公开封面。 */ () => { setSelected(null); onChange(null) }}><Trash2 size={15} aria-hidden="true" /></button>
+    </div>
+    <p className="studio-cover-hint">支持 JPG、PNG、WebP、GIF，最大 5MB。</p>
     {uploading && <p role="status">正在上传或登记封面…</p>}
     {error && <p role="alert">{error}<button type="button" aria-label="重试加载封面媒体" disabled={loading || uploading}
       onClick={/* 重新请求当前媒体页，不改变草稿选择。 */ () => setRetry(/* 递增重试计数。 */ n => n + 1)}>重试加载</button></p>}
+    <details className="studio-cover-library">
+    <summary>从媒体库选择<span>{total} 张</span></summary>
     <div aria-label="已有封面媒体" className="studio-cover-grid" aria-busy={loading}>
       {loading ? <p role="status">正在加载封面媒体…</p> : items.map(/* 渲染带选中状态的现有媒体按钮。 */ item => <button type="button" key={item.id || item.url}
         aria-label={`选取封面：${item.name || item.id}`} aria-pressed={Boolean(value && item.id === value)} disabled={disabled || uploading}
         onClick={/* 选择已有媒体，历史图片先登记取得正式编号。 */ () => choose(item)}>
         <CoverImage key={item.url} url={item.url} alt={item.name || '封面媒体'} />
-        <span>{item.name || item.id}</span>
+        <span title={item.name || item.id}>{item.name || item.id}</span>
+        {Boolean(value && item.id === value) && <Check className="studio-cover-selected" size={16} aria-hidden="true" />}
       </button>)}
       {!loading && !error && !items.length && <p>暂无媒体，请上传封面。</p>}
     </div>
@@ -149,5 +156,6 @@ export default function ArticleCoverField({ value, currentId, currentUrl, disabl
       <button type="button" aria-label="下一页封面媒体" disabled={loading || uploading || offset + 20 >= total}
         onClick={/* 读取下一页媒体。 */ () => setOffset(offset + 20)}>下一页</button>
     </nav>
+    </details>
   </section>
 }

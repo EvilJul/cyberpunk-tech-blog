@@ -1,0 +1,32 @@
+/* 指标主值表示当前累计，迷你曲线仅展示标注日期窗口内的真实活动。 */
+.studio .studio-overview .studio-stats { gap: 16px; margin-bottom: 22px; }
+.studio .studio-overview .studio-stat-card { position: relative; padding: 20px; overflow: hidden; }
+.studio .studio-overview .studio-stat-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--metric-color); opacity: .65; }
+.studio-metric-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.studio-metric-heading svg { color: var(--metric-color); opacity: .8; }
+.studio .studio-overview .studio-stat-label { margin: 0; font-size: 12px; }
+.studio .studio-overview .studio-stat-value { margin-top: 14px; font-size: 34px; font-weight: 650; letter-spacing: -.03em; }
+.studio .studio-overview .studio-stat-value > span { margin-left: 7px; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--studio-muted); }
+.studio .studio-overview .studio-stat-hint { min-height: 32px; margin: 8px 0 4px; font-size: 11px; line-height: 1.5; }
+.studio-activity-chart { position: relative; min-width: 0; }
+.studio-activity-chart > svg { display: block; width: 100%; height: 62px; overflow: visible; color: var(--studio-muted); }
+.studio-chart-note { display: block; margin-top: 4px; color: var(--metric-color); font-size: 10px; }
+.studio-chart-data { margin-top: 8px; color: var(--studio-muted); font-size: 10px; }
+.studio-chart-data summary { cursor: pointer; }
+.studio .studio-chart-data table { width: 100%; margin-top: 8px; font-size: 11px; }
+.studio .studio-chart-data :is(th, td) { padding: 5px; }
+.studio-chart-data caption { text-align: left; padding-bottom: 5px; }
+.studio-metric-missing { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; min-height: 103px; padding-top: 6px; color: var(--studio-muted); font-size: 11px; }
+.studio-metric-missing svg { opacity: .35; }
+.studio-metric-missing small { font-size: 10px; opacity: .7; }
+@media (max-width: 1100px) {
+  .studio .studio-overview .studio-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .studio .studio-overview .studio-stats { gap: 10px; }
+  .studio .studio-overview .studio-stat-card { padding: 15px 12px; }
+  .studio .studio-overview .studio-stat-value { font-size: 29px; }
+  .studio-metric-heading { gap: 4px; }
+  .studio-metric-heading svg { width: 15px; }
+  .studio-chart-data summary { display: inline-flex; align-items: center; min-height: 44px; }
+}

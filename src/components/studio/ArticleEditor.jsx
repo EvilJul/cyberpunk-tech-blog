@@ -1,3 +1,4 @@
+import { Heading1, Heading2, Heading3, Bold, Italic, Strikethrough, Code, Link as LinkIcon, Quote, List, ListOrdered, SquareCode, Table2, Minus, ImagePlus } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -6,6 +7,10 @@ import MarkdownContent from '../blog/MarkdownContent'
 import StudioPageHeader from './StudioPageHeader'
 import './editor-layout.css'
 import ArticleCoverField from './ArticleCoverField'
+import AnimatedDetails from './AnimatedDetails'
+// 格式名称与常见线性图标统一映射，中文名称同时用于提示与无障碍标签。
+const toolIcons = { H1: Heading1, H2: Heading2, H3: Heading3, 加粗: Bold, 斜体: Italic, 删除线: Strikethrough, 行内代码: Code, 链接: LinkIcon, 引用: Quote, 无序列表: List, 有序列表: ListOrdered, 代码块: SquareCode, 表格: Table2, 分隔线: Minus }
+const toolNames = { H1: '一级标题', H2: '二级标题', H3: '三级标题' }
 const payloadFor = /* 整理文章提交字段并去重标签。 */ (form) => ({
   ...form,
   tags: [...new Set(form.tags.map(/* 去除标签首尾空白。 */ (tag) => tag.trim()).filter(Boolean))]
@@ -23,7 +28,7 @@ const blank = {
 }
 const editable = /* 提取可编辑字段并补全默认值。 */ (a) =>
   Object.fromEntries(Object.keys(blank).map(/* 提取当前可编辑字段并补齐默认值。 */ (k) => [k, a[k] ?? blank[k]]))
-/** 提供文章编辑、恢复、上传和显式发布流程。 */
+/** 提供图标化写作工具、封面与可折叠高级属性，保留草稿和显式发布流程。 */
 export default function ArticleEditor() {
   const { id } = useParams(),
     { user } = useAuth(),
@@ -551,22 +556,28 @@ export default function ArticleEditor() {
               ]
             ].map(/* 按功能分组渲染工具栏按钮。 */ ([group, items]) => (
               <div className="studio-editor-toolbar-group" role="group" aria-label={group} data-group-label={group} key={group}>
-                {items.map(/* 将当前条目映射为展示内容。 */ ([label, before, after, placeholder]) => (
-                  <button
+                {items.map(/* 将格式工具渲染为同尺寸图标，中文说明兼顾悬停和键盘焦点。 */ ([label, before, after, placeholder]) => {
+                  const Icon = toolIcons[label]
+                  const name = toolNames[label] || label
+                  return <button
                     type="button"
                     key={label}
+                    aria-label={name}
+                    data-tooltip={name}
                     onClick={/* 标题作用于整行，其余格式作用于当前选区。 */ () => /^#{1,3} $/.test(before) ? insertHeading(before) : insert(before, after, placeholder)}
                   >
-                    {label}
+                    <Icon size={18} aria-hidden="true" />
                   </button>
-                ))}
+                })}
               </div>
             ))}
           </div>
 
           <label className="studio-editor-upload">
-            插入图片（上传后可公开访问）
+            <span className="studio-upload-action"><ImagePlus size={17} aria-hidden="true" />{uploading ? '正在上传…' : '插入图片'}</span>
+            <span className="studio-upload-hint">也可粘贴或拖入图片</span>
             <input
+              aria-label="插入图片（上传后可公开访问）"
               type="file"
               multiple
               disabled={uploading}
@@ -619,26 +630,11 @@ export default function ArticleEditor() {
           </p>
         </div>
 
-        <details className="studio-editor-props" open>
-          <summary>文章属性</summary>
+        <AnimatedDetails className="studio-editor-props" title="文章属性">
           <div className="studio-editor-props-body">
             <ArticleCoverField key={id || 'new'} value={form.cover_media_id}
               currentId={article?.cover_media_id} currentUrl={article?.cover_image} disabled={busy} onBusy={setCoverUploading}
               onChange={/* 封面仅进入工作副本，沿用草稿保存与显式发布流程。 */ value => change('cover_media_id', value)} />
-            <label>
-              文章地址
-              <input
-                value={form.slug || ''}
-                onChange={/* 更新当前文章基础字段。 */ (e) => change('slug', e.target.value)}
-              />
-            </label>
-            <label>
-              作者
-              <input
-                value={form.author || ''}
-                onChange={/* 更新当前文章基础字段。 */ (e) => change('author', e.target.value)}
-              />
-            </label>
             <label>
               摘要
               <input
@@ -667,6 +663,28 @@ export default function ArticleEditor() {
                 onChange={/* 拆分逗号分隔的标签输入。 */ (e) => change('tags', e.target.value.split(/[,，]/))}
               />
             </label>
+            <details className="studio-editor-advanced">
+              <summary>高级设置<span>链接与署名</span></summary>
+            <label>
+              文章地址
+              <input
+                placeholder="留空自动生成"
+                aria-label="文章地址"
+                aria-describedby="studio-slug-help"
+                value={form.slug || ''}
+                onChange={/* 更新当前文章基础字段。 */ (e) => change('slug', e.target.value)}
+              />
+              <small id="studio-slug-help">文章链接末尾的标识；已发布文章修改后，旧链接会失效。</small>
+            </label>
+            <label>
+              作者
+              <input
+                value={form.author || ''}
+                onChange={/* 更新当前文章基础字段。 */ (e) => change('author', e.target.value)}
+              />
+            </label>
+              <p>作者为文章署名，默认使用当前账号，可按需修改。</p>
+            </details>
           </div>
           <div className="studio-editor-secondary-actions">
             {id && (
@@ -692,7 +710,7 @@ export default function ArticleEditor() {
             </button>
           </div>
 
-        </details>
+        </AnimatedDetails>
       </div>
 
       {comparison &&

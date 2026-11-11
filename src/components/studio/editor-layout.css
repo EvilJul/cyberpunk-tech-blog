@@ -187,3 +187,37 @@
   .studio .studio-editor #studio-markdown-content { min-height: 360px; padding: 12px; }
   .studio .studio-editor.studio-editor--preview .studio-editor-body { display: none; }
 }
+
+/* 统一图标工具条，提示兼顾鼠标悬停与键盘聚焦。 */
+.studio .studio-editor .studio-editor-toolbar { gap: 4px; padding: 5px; }
+.studio .studio-editor .studio-editor-toolbar-group { display: flex; flex-wrap: wrap; gap: 2px; margin: 0; padding: 0; border: 0; background: transparent; }
+.studio .studio-editor .studio-editor-toolbar-group + .studio-editor-toolbar-group { padding-left: 5px; border-left: 1px solid var(--studio-border); border-radius: 0; }
+.studio .studio-editor .studio-editor-toolbar-group button { position: relative; display: grid; place-items: center; width: 34px; min-width: 34px; min-height: 36px; padding: 0; border-radius: 6px; color: var(--studio-muted); }
+.studio .studio-editor .studio-editor-toolbar-group button:hover, .studio .studio-editor .studio-editor-toolbar-group button:focus-visible { color: var(--studio-text); background: var(--studio-hover); }
+.studio .studio-editor [data-tooltip]::after { content: attr(data-tooltip); position: absolute; z-index: 5; top: calc(100% + 7px); left: 50%; transform: translate(-50%, -3px); opacity: 0; pointer-events: none; white-space: nowrap; padding: 5px 8px; border: 1px solid var(--studio-border); border-radius: 6px; color: var(--studio-text); background: var(--studio-sidebar); box-shadow: 0 4px 12px #0003; font-size: 11px; transition: opacity .15s, transform .15s; }
+.studio .studio-editor [data-tooltip]:hover::after, .studio .studio-editor [data-tooltip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.studio .studio-editor label.studio-editor-upload { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; margin: 0 0 14px; border: 1px dashed var(--studio-border); border-radius: 8px; background: transparent; cursor: pointer; }
+.studio .studio-editor .studio-upload-action { display: inline-flex; align-items: center; gap: 7px; color: var(--studio-text); font-size: 12px; }
+.studio .studio-editor .studio-upload-hint { color: var(--studio-muted); font-size: 11px; }
+.studio .studio-editor .studio-editor-upload:hover { background: var(--studio-hover); }
+.studio .studio-editor .studio-editor-upload:focus-within { outline: 2px solid var(--studio-accent); outline-offset: 2px; }
+.studio .studio-editor .studio-editor-upload input[type='file'] { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; border: 0; clip-path: inset(50%); overflow: hidden; }
+.studio .studio-editor .studio-editor-advanced { margin-top: 16px; border-top: 1px solid var(--studio-border); padding-top: 12px; }
+.studio .studio-editor .studio-editor-advanced > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 10px; font-size: 12px; cursor: pointer; color: var(--studio-text); }
+.studio .studio-editor .studio-editor-advanced > summary > span { color: var(--studio-muted); font-size: 11px; }
+.studio .studio-editor .studio-editor-advanced :is(small, p) { display: block; margin: 5px 0 12px; font-size: 11px; line-height: 1.6; color: var(--studio-muted); }
+@media (max-width: 767px) {
+  .studio .studio-editor .studio-editor-toolbar-group button { width: 44px; min-width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio .studio-editor [data-tooltip]::after { transition: none; }
+}
+
+/* 属性面板仅在过渡期间裁切，结束后恢复自然高度与内部提示的可见性。 */
+.studio .studio-editor .studio-editor-props[data-animating] { overflow: hidden; }
+.studio .studio-editor .studio-editor-props > summary::after { content: none; }
+.studio .studio-editor .studio-editor-props > summary .studio-collapse-chevron { flex-shrink: 0; color: var(--studio-muted); transform: rotate(0); transition: transform 260ms cubic-bezier(.22,1,.36,1); }
+.studio .studio-editor .studio-editor-props[data-expanded='true'] > summary .studio-collapse-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .studio .studio-editor .studio-editor-props > summary .studio-collapse-chevron { transition: none; }
+}

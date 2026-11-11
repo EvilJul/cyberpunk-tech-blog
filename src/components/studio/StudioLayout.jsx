@@ -12,11 +12,14 @@ import {
   Palette,
   ScrollText,
   Plug,
-  UserRound,
+  ArrowUpRight,
+  LogOut,
   Menu,
   X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSettings } from '../../contexts/SettingsContext'
+import { apiUrl } from '../../utils/api'
 import { studioApi } from '../../utils/studioApi'
 import './studio.css'
 
@@ -101,7 +104,31 @@ function NavLinks({ pathname, publishingEnabled, onNavigate }) {
   )
 }
 
-/** 保护作者路由，桌面使用简洁侧栏，手机提供紧凑导航栏与抽屉。 */
+/** 在桌面与移动导航共用账号卡，复用作者头像并在加载失败时显示账号首字。 */
+function StudioAccount({ user, onLogout, onNavigate }) {
+  const { settings } = useSettings()
+  const [broken, setBroken] = useState('')
+  const avatar = settings.avatar?.startsWith('/uploads/') ? apiUrl(settings.avatar) : settings.avatar
+  return (
+    <div className="studio-sidebar-footer">
+      <Link to="/studio/account" className="studio-profile" onClick={onNavigate} aria-label={`账号设置：${user.username}`}>
+        <span className="studio-profile-avatar">
+          {avatar && broken !== avatar
+            ? <img src={avatar} alt="账号头像" onError={/* 图片失效时回退到账号首字，保留设置入口。 */ () => setBroken(avatar)} />
+            : <span aria-hidden="true">{user.username.slice(0, 1).toUpperCase()}</span>}
+        </span>
+        <span className="studio-profile-info"><strong>{user.username}</strong><small>账号设置</small></span>
+        <Settings aria-hidden="true" />
+      </Link>
+      <div className="studio-profile-actions">
+        <Link to="/studio/settings" onClick={onNavigate}>修改头像</Link>
+        <button className="studio-button studio-button--ghost" onClick={onLogout}><LogOut aria-hidden="true" />退出登录</button>
+      </div>
+    </div>
+  )
+}
+
+/** 保护作者路由，手机导航从触发按钮同侧滑入，退场后恢复焦点和滚动。 */
 export default function StudioLayout() {
   const { user, loading, error, refresh, logout } = useAuth()
   const location = useLocation()
@@ -109,6 +136,7 @@ export default function StudioLayout() {
   const [publishingEnabled, setPublishingEnabled] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const drawerRef = useRef(null)
+  const bodyOverflow = useRef(null)
 
   useEffect(/* 为管理员查询发布集成是否已启用。 */ () => {
     if (user?.role === 'admin')
@@ -125,13 +153,47 @@ export default function StudioLayout() {
     return /* 移除工作台临时禁止索引标记。 */ () => meta.remove()
   }, [])
 
-  /* 抽屉状态与原生 dialog 同步：打开获得焦点约束与 Esc 关闭，关闭后焦点自动回到触发按钮。 */
-  useEffect(/* 同步抽屉开关状态到原生对话框。 */ () => {
+  /** 保持原生模态焦点约束，关闭动画完成后才移除抽屉和遮罩。 */
+  useEffect(/* 状态变化时同步原生模态、滑动动画与背景滚动锁。 */ () => {
     const dialog = drawerRef.current
     if (!dialog) return
-    if (drawerOpen && !dialog.open) dialog.showModal()
-    else if (!drawerOpen && dialog.open) dialog.close()
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!drawerOpen && !dialog.open) return
+    const start = dialog.open ? getComputedStyle(dialog).transform : 'translateX(-100%)'
+    if (drawerOpen) {
+      if (bodyOverflow.current === null) bodyOverflow.current = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      if (!dialog.open) dialog.showModal()
+    }
+    dialog.dataset.state = drawerOpen ? 'opening' : 'closing'
+    const animation = dialog.animate(
+      [{ transform: start }, { transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)' }],
+      { duration: reduced ? 0 : drawerOpen ? 280 : 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' }
+    )
+    animation.onfinish = /* 保留抽屉直到退场完成，同时归还滚动能力。 */ () => {
+      if (!drawerOpen) {
+        dialog.close()
+        if (bodyOverflow.current !== null) document.body.style.overflow = bodyOverflow.current
+        bodyOverflow.current = null
+      }
+    }
+    return /* 取消过期动画，避免旧回调关闭新状态的抽屉。 */ () => {
+      animation.onfinish = null
+      animation.cancel()
+    }
   }, [drawerOpen])
+
+  useEffect(/* 切换至桌面时关闭抽屉，卸载时恢复滚动状态。 */ () => {
+    const desktop = matchMedia('(min-width: 768px)')
+    /** 桌面侧栏出现后释放移动模态。 */
+    const resize = () => { if (desktop.matches) setDrawerOpen(false) }
+    desktop.addEventListener('change', resize)
+    return /* 清理响应式监听及仍未完成的滚动锁。 */ () => {
+      desktop.removeEventListener('change', resize)
+      if (bodyOverflow.current !== null) document.body.style.overflow = bodyOverflow.current
+      bodyOverflow.current = null
+    }
+  }, [])
 
   /* 路由变化时收起移动抽屉，避免返回导航时抽屉滞留。 */
   useEffect(/* 路由切换后关闭移动抽屉。 */ () => setDrawerOpen(false), [location.pathname])
@@ -173,21 +235,12 @@ export default function StudioLayout() {
   return (
     <div className="studio">
       <aside className="studio-sidebar">
-        <p className="studio-brand">内容工作台</p>
-        <NavLinks pathname={location.pathname} publishingEnabled={publishingEnabled} />
-        <div className="studio-sidebar-footer">
-          <Link to="/" className="studio-button studio-button--ghost">查看博客</Link>
-          <p className="studio-account">
-            <UserRound aria-hidden="true" />
-            <span>{user.username}</span>
-          </p>
-          <Link to="/studio/account" className="studio-button studio-button--ghost">
-            账号设置
-          </Link>
-          <button className="studio-button studio-button--ghost" onClick={handleLogout}>
-            退出登录
-          </button>
+        <div className="studio-sidebar-heading">
+          <p className="studio-brand">内容工作台</p>
+          <Link to="/" className="studio-blog-link" aria-label="查看博客" title="查看博客"><ArrowUpRight aria-hidden="true" /></Link>
         </div>
+        <NavLinks pathname={location.pathname} publishingEnabled={publishingEnabled} />
+        <StudioAccount user={user} onLogout={handleLogout} />
       </aside>
 
       <dialog
@@ -195,7 +248,8 @@ export default function StudioLayout() {
         id="studio-drawer"
         className="studio-drawer"
         aria-labelledby="studio-drawer-title"
-        onCancel={/* Esc 关闭抽屉并与状态保持同步。 */ () => setDrawerOpen(false)}
+        onCancel={/* 阻止浏览器立即关闭，先完成退场动画。 */ event => { event.preventDefault(); setDrawerOpen(false) }}
+        onClick={/* 只在遮罩区域释放点击时关闭，不影响抽屉内操作。 */ event => { if (event.target !== event.currentTarget) return; const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setDrawerOpen(false) }}
         onClose={/* 对话框以任意方式关闭后同步状态。 */ () => setDrawerOpen(false)}
       >
         <div className="studio-drawer-header">
@@ -215,11 +269,7 @@ export default function StudioLayout() {
           publishingEnabled={publishingEnabled}
           onNavigate={/* 点击抽屉内导航后关闭抽屉。 */ () => setDrawerOpen(false)}
         />
-        <div className="studio-sidebar-footer">
-          <button className="studio-button studio-button--ghost" onClick={handleLogout}>
-            退出登录
-          </button>
-        </div>
+        <StudioAccount user={user} onLogout={handleLogout} onNavigate={/* 切换账号或头像设置时收起移动导航。 */ () => setDrawerOpen(false)} />
       </dialog>
 
       <div className="studio-main">

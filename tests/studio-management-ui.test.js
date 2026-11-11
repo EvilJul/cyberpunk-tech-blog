@@ -177,7 +177,7 @@ test('real browser management acceptance against isolated backend', { timeout: 1
   await check('Markdown toolbar inserts strike, inline code and three heading levels into the selected text', /* 验证五项辅助工具保留选区外正文并正确渲染预览。 */ async () => {
     await goto('/studio/editor/new')
     const body = page.getByLabel('Markdown 正文', { exact: true })
-    for (const [name, before, after, selector] of [['H1', '# ', '', 'h1'], ['H2', '## ', '', 'h2'], ['H3', '### ', '', 'h3'], ['删除线', '~~', '~~', 'del'], ['行内代码', '`', '`', 'code']]) {
+    for (const [name, before, after, selector] of [['一级标题', '# ', '', 'h1'], ['二级标题', '## ', '', 'h2'], ['三级标题', '### ', '', 'h3'], ['删除线', '~~', '~~', 'del'], ['行内代码', '`', '`', 'code']]) {
       await body.fill('前\n主体\n后')
       await body.evaluate(/* 明确选中第二行，检查工具只作用于当前选区。 */ element => { element.focus(); element.setSelectionRange(2, 4) })
       await page.getByRole('toolbar', { name: 'Markdown 工具栏' }).getByRole('button', { name, exact: true }).click()
@@ -188,7 +188,7 @@ test('real browser management acceptance against isolated backend', { timeout: 1
     }
     await body.fill('前\n主体\n后')
     await body.evaluate(/* 将光标置于行中，验证标题前缀仍插入行首。 */ element => { element.focus(); element.setSelectionRange(3, 3) })
-    await page.getByRole('toolbar', { name: 'Markdown 工具栏' }).getByRole('button', { name: 'H3', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Markdown 工具栏' }).getByRole('button', { name: '三级标题', exact: true }).click()
     await expect(body).toHaveValue('前\n### 主体\n后')
   })
   await check('full settings normal fields, avatar upload and JSON import/export roundtrip', /* 验证设置字段、头像上传及 JSON 往返。 */ async () => {

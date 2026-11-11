@@ -27,6 +27,7 @@ server/data/*.db.corrupted
 server/data/uploads/
 server/data/*.json
 server/data/*.bak.*
+server/data/backups/
 
 # OS files
 .DS_Store

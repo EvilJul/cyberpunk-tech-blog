@@ -37,3 +37,17 @@ docker compose exec public node scripts/create-setup-token.js
 优先回退到理解新 schema 的兼容应用。仅停用 B 时先关闭开关、撤销测试密钥、停止机器写入，保留新表和来源身份，不逆向删除 schema。
 
 若必须回到 A 之前版本：停止所有写入和 backup/宿主 timer，完整保留上线后数据并导出需保留的新内容。使用上线前同一时点的应用、数据库和配置恢复到全新目录，不能让旧程序继续写新工作副本库，不能在线覆盖 blog.db 或混入旧 WAL/SHM。上传保留超集，禁止删除上线后新媒体。明确恢复窗口内新写丢失范围，核对账号、链接、计数、主题及健康后再恢复服务与每日备份。
+
+## 首页置顶增量
+
+`featured-articles-v1` 幂等增加 `articles.pinned`（非空、默认0）和公开推荐索引，既有文章默认不置顶；重复启动保留置顶值。回退兼容应用时保留新增列及索引，不逆向删除。仅在一次性副本验证迁移及完整性，不自动执行线上迁移。
+
+管理员 `PUT /api/studio/articles/:id/pin` 接受 `{pinned: boolean}`，使用现有会话、CSRF 和 `If-Match: "<revision>"`。成功返回工作台 DTO、布尔 `pinned` 和新 ETag，共享 revision 每次成功递增；缺少版本428、过期412、草稿置顶409，取消置顶允许草稿。此操作不改变公开正文、封面或 published_revision，也不发布工作副本。保存及发布不覆盖独立置顶值；撤回后立即退出推荐，保留置顶元数据。
+
+`GET /api/articles/featured/list` 返回 `{data: [...]}`，只含已发布置顶公开快照，最多20篇，按发布日期倒序、ID稳定排序。公开列表及推荐的 `cover_image` 关联公开 `cover_media_id`；工作台 DTO 则解析当前工作副本封面用于预览。草稿封面保存不影响公开快照，清除封面用 null；封面须为已登记媒体，集成调用仍受原有媒体归属校验约束。
+
+工作台媒体：`POST /api/studio/media` 保持200及 `{success,url}`，增量返回真实 `id`。`GET /api/studio/media` 保持只读，items 额外返回 `id`，未登记历史图片为 null。前端选择历史图片时须先 `POST /api/studio/media/register`，body `{filename: item.name}`，沿用管理员 session 与 CSRF，成功200返回 `{id,url}`；重复调用复用编号。不能将 URL 当作 cover_media_id。登记拒绝路径穿越、符号链接、非普通文件、超20MiB及不可完整解码图片，不修改文件或迁移已有归属。历史登记使用禁用的内部工作台媒体主体，文件名参与摘要以保留重复内容的不同地址；工作台登记不参与集成未引用媒体自动清扫。
+
+推荐采用两段路径 `/api/articles/featured/list`，不占用原有 `/api/articles/:slug` 空间；slug 为 featured 的既有文章仍通过 `/api/articles/featured` 读取详情，客户端详情请求及文章页面链接无需变动。
+
+内部媒体 owner 不在集成管理列表展示，其管理路径统一404，禁止启用和生成密钥；共享密钥服务与机器认证也拒绝该主体，即使异常库里存在启用状态或旧密钥亦无机器权限。登记已注册的集成文件只复用原 id/url，保留其 integration_id 和全部元数据。

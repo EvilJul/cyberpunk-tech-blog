@@ -108,7 +108,7 @@ export class ArticleDAO {
   }
 
   /**
-   * 分页查询文章
+   * 分页查询公开快照，支持置顶筛选并关联公开封面
    */
   static findAll({
     page = 1,
@@ -118,6 +118,7 @@ export class ArticleDAO {
     search,
     status,
     includeDrafts = false,
+    featured = false,
     sort = 'publish_date',
     order = 'DESC'
   } = {}) {
@@ -133,6 +134,8 @@ export class ArticleDAO {
       whereConditions.push('a.status = ?')
       params.push(status)
     }
+
+    if (featured) whereConditions.push('a.pinned = 1')
 
     // 分类筛选
     if (category) {
@@ -199,7 +202,7 @@ export class ArticleDAO {
     const orderDir = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
 
     const stmt = db.prepare(`
-      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.status, a.publish_date, a.update_date, c.name as category,
+      SELECT a.id, a.title, a.slug, a.excerpt, a.author, a.status, a.publish_date, a.update_date, c.name as category, m.url AS cover_image,
              COALESCE(s.views, 0) AS views, COALESCE(s.likes, 0) AS likes,
              ${readingMetricsSql},
              json_group_array(t.name) FILTER (WHERE t.name IS NOT NULL) AS tags_json
@@ -208,6 +211,7 @@ export class ArticleDAO {
       LEFT JOIN article_tags at ON a.id = at.article_id
       LEFT JOIN tags t ON at.tag_id = t.id
       LEFT JOIN article_stats s ON s.article_id = a.id
+      LEFT JOIN integration_media m ON m.id = a.cover_media_id
       ${whereClause}
       GROUP BY a.id
       ORDER BY a.${sortField} ${orderDir}, a.id ASC

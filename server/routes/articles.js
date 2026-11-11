@@ -56,6 +56,14 @@ router.get('/', async (req, res, next) => {
   }
 })
 
+router.get('/featured/list', /* 仅读取已发布置顶快照，忽略管理身份和客户端筛选。 */ (req, res, next) => {
+  try {
+    res.json({ data: ArticleDAO.findAll({ featured: true, perPage: 20 }).data })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // 高级搜索（使用 FTS5）
 router.get('/search/advanced', async (req, res, next) => {
   try {
@@ -121,7 +129,7 @@ router.get('/by-id/:id', async (req, res, next) => {
 })
 
 // 根据 slug 获取文章（仅已发布）
-router.get('/:slug', async (req, res, next) => {
+router.get('/:slug', /* 按原有单段slug读取文章，与两段推荐路径互不占用。 */ async (req, res, next) => {
   try {
     const article = ArticleDAO.findBySlug(req.params.slug)
 

@@ -5,6 +5,8 @@ import {
   timingSafeEqual
 } from 'node:crypto'
 import db from '../db/index.js'
+// 该主体仅承载工作台媒体外键，永远不能作为机器权限主体。
+export const studioMediaOwner = '__studio_media__'
 export const SCOPES = [
   'articles:read',
   'articles:write',
@@ -44,7 +46,7 @@ export function audit(
     Date.now()
   )
 }
-/** 复核集成密钥有效性、权限及文章归属。 */
+/** 复核集成凭据及归属，始终拒绝内部工作台主体。 */
 export function verifyActor(actor, scope, articleId = null) {
   const row = db
     .prepare(
@@ -52,6 +54,7 @@ export function verifyActor(actor, scope, articleId = null) {
     )
     .get(actor?.keyId || '', actor?.integrationId || '')
   if (
+    actor?.integrationId === studioMediaOwner ||
     !enabled() ||
     !row ||
     !row.enabled ||
@@ -141,8 +144,9 @@ export function createIntegration(payload) {
   ).run(row)
   return row
 }
-/** 创建仅返回一次明文的集成密钥。 */
+/** 为外部集成创建仅返回一次明文的密钥，拒绝内部主体。 */
 export function createKey(integrationId, payload = {}) {
+  if (integrationId === studioMediaOwner) fail(404, 'NOT_FOUND')
   if (!enabled()) fail(404, 'NOT_FOUND', '发布集成尚未启用')
   if (
     !payload ||

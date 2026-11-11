@@ -65,8 +65,8 @@ export function WechatDialog({ name, account, qr, onClose }) {
   )
 }
 
-/** 联系方式固定显示三种图标，有效配置点亮，空值与危险链接保持不可点击。 */
-export default function ContactLinks({ settings, onWechatOpen }) {
+/** 展示有效联系账号；默认保留禁用占位，紧凑侧栏可隐藏未配置项。 */
+export default function ContactLinks({ settings, onWechatOpen, hideUnavailable = false }) {
   const [open, setOpen] = useState(false)
   const github = contactUrl(settings.github)
   const email = text(settings.email)
@@ -75,11 +75,12 @@ export default function ContactLinks({ settings, onWechatOpen }) {
   const account = text(settings.wechatId)
   const qr = contactUrl(settings.wechatQr, true)
   const wechat = Boolean(name || account || qr)
+  if (hideUnavailable && !github && !validEmail && !wechat) return null
   return (
     <div className="reader-contacts" aria-label="作者联系账号">
-      {github ? <a className="reader-contact is-enabled" href={github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="访问 GitHub"><Github size={19} aria-hidden="true" /></a> : <span className="reader-contact" role="img" aria-label="GitHub（未设置）" title="GitHub 未设置"><Github size={19} aria-hidden="true" /></span>}
-      {validEmail ? <a className="reader-contact is-enabled" href={`mailto:${encodeURIComponent(email)}`} aria-label="联系邮箱" title="发送邮件"><Mail size={19} aria-hidden="true" /></a> : <span className="reader-contact" role="img" aria-label="联系邮箱（未设置）" title="联系邮箱未设置"><Mail size={19} aria-hidden="true" /></span>}
-      {wechat ? <button type="button" className="reader-contact reader-contact--wechat is-enabled" aria-label="微信公众号" aria-haspopup="dialog" title="查看微信公众号" onClick={/* 在当前页面展示公众号，不跳转外部网站。 */ () => onWechatOpen ? onWechatOpen({ name, account, qr }) : setOpen(true)}><MessagesSquare size={19} aria-hidden="true" /></button> : <span className="reader-contact" role="img" aria-label="微信公众号（未设置）" title="微信公众号未设置"><MessagesSquare size={19} aria-hidden="true" /></span>}
+      {github ? <a className="reader-contact is-enabled" href={github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="访问 GitHub"><Github size={19} aria-hidden="true" /></a> : !hideUnavailable && <span className="reader-contact" role="img" aria-label="GitHub（未设置）" title="GitHub 未设置"><Github size={19} aria-hidden="true" /></span>}
+      {validEmail ? <a className="reader-contact is-enabled" href={`mailto:${encodeURIComponent(email)}`} aria-label="联系邮箱" title="发送邮件"><Mail size={19} aria-hidden="true" /></a> : !hideUnavailable && <span className="reader-contact" role="img" aria-label="联系邮箱（未设置）" title="联系邮箱未设置"><Mail size={19} aria-hidden="true" /></span>}
+      {wechat ? <button type="button" className="reader-contact reader-contact--wechat is-enabled" aria-label="微信公众号" aria-haspopup="dialog" title="查看微信公众号" onClick={/* 在当前页面展示公众号，不跳转外部网站。 */ () => onWechatOpen ? onWechatOpen({ name, account, qr }) : setOpen(true)}><MessagesSquare size={19} aria-hidden="true" /></button> : !hideUnavailable && <span className="reader-contact" role="img" aria-label="微信公众号（未设置）" title="微信公众号未设置"><MessagesSquare size={19} aria-hidden="true" /></span>}
       {open && wechat && <WechatDialog key={qr} name={name} account={account} qr={qr} onClose={/* 关闭公众号信息弹层。 */ () => setOpen(false)} />}
     </div>
   )

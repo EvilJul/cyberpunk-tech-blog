@@ -3,15 +3,17 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom'
 import React, { useState, useEffect, useRef } from 'react'
 import ArticleCard from './ArticleCard'
 import SearchBar from './SearchBar'
+import FeaturedArticles from './FeaturedArticles'
 import { useMobileReader } from '../../utils/readerViewport'
 import './article-list.css'
+import './home-editorial.css'
 
 /** 严格解析十进制页码并限制可请求范围。 */
 function parsePage(value) {
   return /^[0-9]+$/.test(String(value)) && Number(value) > 0 ? Math.min(1000000, Number(value)) : 1
 }
 
-/** 展示可取消、防乱序的分页结果；弹层模式使用独立状态而不读取外部查询参数。 */
+/** 展示首页杂志推荐与可取消、防乱序的分页结果；弹层使用独立搜索状态。 */
 export default function ArticleList({ onArticleClick, perPage = 10, onTotal, filterCategory, filterTag, showCategories = true, autoFocusSearch = false, syncUrl = true, initialQuery = '', initialPage = 1, onStateChange, initialScrollTop = 0 }) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -159,10 +161,18 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal, fil
     if (!syncUrl && query) next.set('q', query)
     return `${value ? `/category/${encodeURIComponent(value)}` : '/'}${next.size ? `?${next}` : ''}`
   }
+  const home = syncUrl && location.pathname === '/' && !query && !draft && !category && !tag && page === 1
   const stale = loading || error || result?.query !== query || result?.page !== page
   return (
-    <div className="reader-article-list" data-initial-scroll-top={initialScrollTop} data-list-ready={!loading && !error}>
+    <div className={`reader-article-list${home ? ' reader-article-list--home' : ''}`} data-initial-scroll-top={initialScrollTop} data-list-ready={!loading && !error}>
+      {syncUrl && location.pathname === '/' && <header className="home-intro">
+        <span className="home-eyebrow"><span />探索 · 构建 · 分享</span>
+        <h1>让想法，<em>不止于想象。</em></h1>
+        <p>记录技术探索与实践，把每一次尝试写成有用的经验。</p>
+      </header>}
       <SearchBar query={draft} onSearch={setDraft} onComposingChange={setComposing} autoFocus={autoFocusSearch} focusRequest={syncUrl && params.get('focus') === 'search'} />
+      {home && <FeaturedArticles />}
+      {home && !isMobile && <div className="home-section-heading"><h2>最近的记录<span> / 技术手记</span></h2><Link to="/explore">探索全部文章 ↗</Link></div>}
       {showCategories && isMobile && <div className="reader-list-heading"><h2>最新文章</h2><Link to="/explore">浏览分类</Link></div>}
       {showCategories && !isMobile && <nav aria-label="文章分类" className="mb-6 flex flex-wrap gap-2 text-dark-400">
         <Link to={categoryLink(null)}>全部</Link>

@@ -1,3 +1,4 @@
+import { registerStudioMedia } from '../services/studioMediaService.js'
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 import { authMiddleware, adminOnly } from '../middleware/auth.js'
@@ -76,7 +77,7 @@ export const parseStudioImage = (req, res, next) =>
     next()
   })
 
-/** 解码校验上传图片，按用途缩放并保存为JPEG后返回访问地址。 */
+/** 解码校验图片并保存JPEG，工作台上传同时返回登记编号及兼容地址。 */
 export async function handleStudioImage(req, res) {
   try {
     if (!req.file) {
@@ -142,7 +143,8 @@ export async function handleStudioImage(req, res) {
       .jpeg({ quality, mozjpeg: true })
       .toFile(filepath)
 
-    res.json({ success: true, url: `/uploads/${filename}` })
+    const media = req.session ? await registerStudioMedia(filename) : {}
+    res.json({ success: true, url: `/uploads/${filename}`, ...media })
   } catch (error) {
     // 处理 Multer 错误
     if (error instanceof multer.MulterError) {

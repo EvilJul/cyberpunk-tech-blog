@@ -1,3 +1,4 @@
+import { studioMediaOwner } from './studioMediaService.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -108,7 +109,7 @@ function mediaReferenced(filename, id = null) {
   }
   return false
 }
-/** 清理过期幂等记录、审计及未引用媒体。 */
+/** 清理过期集成媒体及记录，工作台登记不自动清扫。 */
 export function cleanupPublishing(now = Date.now()) {
   if (db.inTransaction) throw new Error('媒体维护必须在独立事务外运行')
   let files = 0,
@@ -118,8 +119,8 @@ export function cleanupPublishing(now = Date.now()) {
   // registration whose file was already removed. Failed unlinks remain retryable.
   db.transaction(/* 先提交媒体登记清理及过期记录删除。 */ () => {
     for (const row of db
-      .prepare('SELECT * FROM integration_media WHERE created_at<?')
-      .all(now - 7 * 86400000)) {
+      .prepare('SELECT * FROM integration_media WHERE created_at<? AND integration_id!=?')
+      .all(now - 7 * 86400000, studioMediaOwner)) {
       if (!mediaReferenced(row.filename, row.id)) {
         db.prepare('DELETE FROM integration_media WHERE id=?').run(row.id)
         media++

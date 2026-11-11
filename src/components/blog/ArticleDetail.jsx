@@ -7,8 +7,10 @@ import CommentSection from './CommentSection'
 import MarkdownContent from './MarkdownContent'
 import { useSettings } from '../../contexts/SettingsContext'
 import { useSeo } from '../../utils/seo'
+import { CalendarDays, FileText, Clock3, Eye, ThumbsUp } from 'lucide-react'
+import { articleDate } from '../../utils/articlePresentation'
 import './article-reading.css'
-/** 在独立阅读底板中展示文章、目录与评论，隔离自定义背景干扰。 */
+/** 在独立阅读底板中展示文章与评论，将点赞操作与阅读数据并排呈现。 */
 export default function ArticleDetail() {
   const { user } = useAuth()
   const { slug } = useParams(),
@@ -71,6 +73,7 @@ export default function ArticleDetail() {
       })
     return () => controller.abort()
   }, [slug, retry])
+  /** 提交点赞并同步服务端计数，保留失败提示。 */
   const like = async () => {
     try {
       const r = await apiFetch(`/api/stats/article/${article.id}/likes`, {
@@ -78,7 +81,7 @@ export default function ArticleDetail() {
       })
       if (!r.ok) throw Error('点赞失败，请稍后重试')
       const data = await r.json()
-      setArticle((a) => ({ ...a, likes: data.likes }))
+      setArticle(/* 仅更新当前文章的点赞数。 */ (a) => ({ ...a, likes: data.likes }))
       setLiked(true)
     } catch (e) {
       setError(e.message)
@@ -109,16 +112,18 @@ export default function ArticleDetail() {
       </nav>
       <header className="article-reading-header">
         <h1>{article.title}</h1>
-        <time dateTime={article.publish_date || article.publishDate}>
-          {article.publish_date || article.publishDate}
-        </time>
-        <p>
-          {words} 字 · 约 {Math.max(1, Math.ceil(words / 400))} 分钟 ·{' '}
-          {article.views || 0} 阅读
-        </p>
-        <button onClick={like} disabled={liked}>
-          {article.likes || 0} 喜欢{liked ? ' · 已点赞' : ''}
-        </button>
+        <div className="article-reading-meta" aria-label="文章信息">
+          <time className="article-meta-item article-meta-date" dateTime={article.publish_date || article.publishDate}>
+            <CalendarDays aria-hidden="true" /><span>{articleDate(article.publish_date || article.publishDate)}</span>
+          </time>
+          <span className="article-meta-item"><FileText aria-hidden="true" /><span>{words} 字</span></span>
+          <span className="article-meta-item"><Clock3 aria-hidden="true" /><span>约 {Math.max(1, Math.ceil(words / 400))} 分钟</span></span>
+          <span className="article-meta-item"><Eye aria-hidden="true" /><span>{article.views || 0} 阅读</span></span>
+          <button type="button" className="article-like article-meta-item" onClick={like} disabled={liked} aria-pressed={liked} aria-label={liked ? '已点赞' : '点赞'} title={liked ? '已点赞' : '为文章点赞'}>
+            <ThumbsUp aria-hidden="true" />
+            <span>{article.likes || 0} 点赞</span>
+          </button>
+        </div>
         <p>
           {(article.tags || []).map((tag) => (
             <Link

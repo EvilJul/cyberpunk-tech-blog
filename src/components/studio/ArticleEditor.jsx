@@ -5,6 +5,7 @@ import { studioApi, exportRecovery } from '../../utils/studioApi'
 import MarkdownContent from '../blog/MarkdownContent'
 import StudioPageHeader from './StudioPageHeader'
 import './editor-layout.css'
+import ArticleCoverField from './ArticleCoverField'
 const payloadFor = /* 整理文章提交字段并去重标签。 */ (form) => ({
   ...form,
   tags: [...new Set(form.tags.map(/* 去除标签首尾空白。 */ (tag) => tag.trim()).filter(Boolean))]
@@ -38,7 +39,8 @@ export default function ArticleEditor() {
     [comparison, setComparison] = useState(null),
     [preview, setPreview] = useState(false)
   const [categories, setCategories] = useState([]),
-    [uploading, setUploading] = useState(false)
+    [uploading, setUploading] = useState(false),
+    [coverUploading, setCoverUploading] = useState(false)
   useEffect(/* 按作者身份加载可选分类。 */ () => {
     studioApi('/api/studio/categories')
       .then(/* 更新分类列表。 */ (data) =>
@@ -210,8 +212,8 @@ export default function ArticleEditor() {
     }
     return { saved, sentSequence }
   }
-  const run = /* 执行操作并统一处理忙碌状态与错误反馈。 */ async (action) => {
-    if (lock.current) return
+  const run = /* 执行保存或发布操作，封面上传期间阻止提交并统一反馈错误。 */ async (action) => {
+    if (lock.current || coverUploading) return
     lock.current = true
     setBusy(true)
     setError('')
@@ -294,8 +296,8 @@ export default function ArticleEditor() {
     setError('')
     setMessage('已重载服务端版本')
   }
-  const copy = /* 将当前缓冲另存为新草稿。 */ async () => {
-    if (lock.current || !confirm('将当前输入另存为一篇新草稿？')) return
+  const copy = /* 将当前缓冲另存为新草稿，等待封面上传完成后再提交。 */ async () => {
+    if (lock.current || coverUploading || !confirm('将当前输入另存为一篇新草稿？')) return
     lock.current = true
     setBusy(true)
     try {
@@ -418,7 +420,7 @@ export default function ArticleEditor() {
       <div className="studio-editor-top">
         <StudioPageHeader title={id ? '编辑文章' : '新建文章'} />
         <div className="studio-actions studio-editor-actions">
-          <button disabled={busy} onClick={/* 执行当前按钮对应的管理操作。 */ () => run('save')}>
+          <button disabled={busy || coverUploading} onClick={/* 执行当前按钮对应的管理操作。 */ () => run('save')}>
             保存草稿
           </button>
           <button
@@ -429,7 +431,7 @@ export default function ArticleEditor() {
           </button>
           <button
             className="studio-button--primary"
-            disabled={busy}
+            disabled={busy || coverUploading}
             onClick={/* 执行当前按钮对应的管理操作。 */ () => run('publish')}
           >
             发布
@@ -620,6 +622,9 @@ export default function ArticleEditor() {
         <details className="studio-editor-props" open>
           <summary>文章属性</summary>
           <div className="studio-editor-props-body">
+            <ArticleCoverField key={id || 'new'} value={form.cover_media_id}
+              currentId={article?.cover_media_id} currentUrl={article?.cover_image} disabled={busy} onBusy={setCoverUploading}
+              onChange={/* 封面仅进入工作副本，沿用草稿保存与显式发布流程。 */ value => change('cover_media_id', value)} />
             <label>
               文章地址
               <input
@@ -669,7 +674,7 @@ export default function ArticleEditor() {
                 比较最新版本
               </button>
             )}
-            <button className="studio-button--ghost" disabled={busy} onClick={copy}>
+            <button className="studio-button--ghost" disabled={busy || coverUploading} onClick={copy}>
               另存新草稿
             </button>
             <button

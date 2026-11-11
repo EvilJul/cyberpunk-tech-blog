@@ -218,6 +218,8 @@ function normalize(payload, base = {}, creating = false) {
   }
   if (data.cover_media_id !== null && typeof data.cover_media_id !== 'string')
     throw articleError(400, 'INVALID_MEDIA', '封面编号无效')
+  if (data.cover_media_id !== null && !db.prepare('SELECT 1 FROM integration_media WHERE id=?').get(data.cover_media_id))
+    throw articleError(400, 'INVALID_MEDIA', '封面不存在')
   if (data.slug === undefined || data.slug === null || data.slug === '') {
     if (!creating && base.slug) data.slug = base.slug
     else
@@ -298,6 +300,10 @@ function dto(id) {
   return {
     ...article,
     ...payload,
+    pinned: !!article.pinned,
+    cover_image: payload.cover_media_id
+      ? db.prepare('SELECT url FROM integration_media WHERE id=?').get(payload.cover_media_id)?.url ?? null
+      : null,
     updated_at: draftTime ?? article.updated_at,
     id: article.id,
     status: article.status,
@@ -360,6 +366,23 @@ export function saveDraft(id, payload, expectedRevision, actor) {
       return dto(id)
     })
     .immediate()
+}
+/** 仅管理员可更新独立置顶状态，不提升草稿或修改公开内容。 */
+export function setPinned(id, payload, expectedRevision, actor) {
+  return db.transaction(/* 原子校验权限、版本及发布状态并递增共享版本。 */ () => {
+    if (actor?.kind === 'integration')
+      throw articleError(403, 'FORBIDDEN', '仅管理员可管理置顶')
+    authorize(actor, id, 'pin')
+    const article = row(id)
+    checkVersion(article, expectedRevision)
+    if (!payload || typeof payload.pinned !== 'boolean' || Object.keys(payload).length !== 1)
+      throw articleError(400, 'INVALID_FIELDS', '请仅提供布尔值 pinned')
+    if (payload.pinned && article.status !== 'published')
+      throw articleError(409, 'NOT_PUBLISHED', '仅已发布文章可置顶')
+    db.prepare('UPDATE articles SET pinned=?,revision=revision+1 WHERE id=?')
+      .run(Number(payload.pinned), id)
+    return dto(id)
+  }).immediate()
 }
 /** 校验版本并将工作副本发布为公开内容。 */
 export function publish(id, expectedRevision, actor) {
@@ -522,6 +545,7 @@ export function listWorkingCopies(
 }
 export const articleService = {
   getWorkingCopy,
+  setPinned,
   createDraft,
   saveDraft,
   publish,

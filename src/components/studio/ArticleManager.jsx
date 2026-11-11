@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { studioApi } from '../../utils/studioApi'
 import StudioPageHeader from './StudioPageHeader'
 
-/** 提供结构化文章列表，分区展示内容、发布时间与操作。 */
+/** 提供结构化文章列表，分区展示内容、发布时间与独立置顶操作。 */
 export default function ArticleManager() {
   const [params] = useSearchParams()
   const [query, setQuery] = useState(''),
@@ -14,7 +14,10 @@ export default function ArticleManager() {
     ),
     [result, setResult] = useState(null),
     [error, setError] = useState(''),
-    [retry, setRetry] = useState(0)
+    [retry, setRetry] = useState(0),
+    [pinBusy, setPinBusy] = useState(null),
+    [message, setMessage] = useState('')
+  const pinLock = useRef(false)
 
   /* 地址携带的状态参数变化时同步筛选（如概览“查看草稿”入口）。 */
   useEffect(/* 同步地址状态参数到筛选条件。 */ () => {
@@ -51,6 +54,27 @@ export default function ArticleManager() {
       else setRetry(/* 递增刷新计数以重新加载文章。 */ (n) => n + 1)
     } catch (e) {
       setError(e.message)
+    }
+  }
+
+  /** 独立更新推荐元数据；不保存或发布工作副本，失败时保留列表供刷新重试。 */
+  async function togglePin(a) {
+    if (pinLock.current || (!a.pinned && a.status !== 'published')) return
+    pinLock.current = true
+    setPinBusy(a.id)
+    setError('')
+    setMessage('')
+    try {
+      await studioApi(`/api/studio/articles/${encodeURIComponent(a.id)}/pin`, {
+        method: 'PUT', revision: a.revision, body: { pinned: !a.pinned }
+      })
+      setMessage(a.pinned ? '已取消首页置顶' : '已首页置顶，未发布修改仍保留在草稿')
+      setRetry(/* 重新读取共享版本，避免下一次操作携带过期版本。 */ n => n + 1)
+    } catch (e) {
+      setError(`${[409, 412].includes(e.status) ? '文章版本已变化，请刷新列表后重试。' : ''}${e.message}`)
+    } finally {
+      pinLock.current = false
+      setPinBusy(null)
     }
   }
 
@@ -114,6 +138,7 @@ export default function ArticleManager() {
         </label>
       </div>
 
+      <p role="status">{pinBusy !== null ? '正在更新首页置顶…' : message}</p>
       {error && (
         <p role="alert">
           {error}{' '}
@@ -136,6 +161,7 @@ export default function ArticleManager() {
                   <span className={`studio-badge ${a.status === 'published' ? 'studio-badge--ok' : 'studio-badge--muted'}`}>
                     {a.status === 'published' ? '已发布' : '草稿'}
                   </span>
+                  {a.pinned && <span className="studio-badge studio-badge--warn">首页已置顶</span>}
                   {a.has_draft && (
                     <span className="studio-badge studio-badge--warn" title="修改仅保存在工作副本，尚未发布">
                       有未发布修改
@@ -156,7 +182,12 @@ export default function ArticleManager() {
                   <Link className="studio-button" to={`/studio/editor/${a.id}`}>
                     编辑
                   </Link>
-                  <button className="studio-button studio-button--danger" onClick={/* 删除当前列表文章。 */ () => remove(a)}>
+                  <button type="button" className="studio-button" disabled={pinBusy !== null || (!a.pinned && a.status !== 'published')}
+                    aria-pressed={Boolean(a.pinned)} title={!a.pinned && a.status !== 'published' ? '仅已发布文章可置顶' : '仅更改推荐状态，不发布草稿'}
+                    onClick={/* 独立切换当前文章的首页推荐状态。 */ () => togglePin(a)}>
+                    {pinBusy === a.id ? '更新中…' : a.pinned ? '取消置顶' : '首页置顶'}
+                  </button>
+                  <button disabled={pinBusy !== null} className="studio-button studio-button--danger" onClick={/* 删除当前列表文章。 */ () => remove(a)}>
                     删除
                   </button>
                 </div>

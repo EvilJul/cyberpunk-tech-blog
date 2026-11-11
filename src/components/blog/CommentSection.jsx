@@ -1,6 +1,6 @@
 import { apiFetch } from '../../utils/api'
 import React, { useState, useEffect } from 'react'
-/** 展示和提交审核评论，昵称与正文输入上限遵循后端校验。 */
+/** 展示审核评论与紧凑响应式表单，输入上限和提交流程遵循后端校验。 */
 export default function CommentSection({ articleId }) {
   const [comments, setComments] = useState([]),
     [error, setError] = useState(''),
@@ -95,11 +95,11 @@ export default function CommentSection({ articleId }) {
           .filter((c) => !ids.has(c.parent_id || c.parentId))
           .map((c) => render(c))}
       </ul>
-      <form onSubmit={submit}>
+      <form className="comment-form" onSubmit={submit}>
         {reply && (
-          <p>
+          <p className="comment-form-reply">
             回复 {reply.author}{' '}
-            <button type="button" onClick={() => setReply(null)}>
+            <button type="button" onClick={/* 取消回复并保留输入内容。 */ () => setReply(null)}>
               取消回复
             </button>
           </p>
@@ -110,7 +110,7 @@ export default function CommentSection({ articleId }) {
             required
             maxLength={50}
             value={form.author}
-            onChange={(e) => setForm({ ...form, author: e.target.value })}
+            onChange={/* 更新昵称，不影响已输入的正文。 */ (e) => setForm({ ...form, author: e.target.value })}
           />
         </label>
         <label>
@@ -119,17 +119,19 @@ export default function CommentSection({ articleId }) {
             type="email"
             maxLength={254}
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={/* 邮箱仅随评论提交，不公开显示。 */ (e) => setForm({ ...form, email: e.target.value })}
           />
         </label>
-        <label>
+        <label className="comment-form-content">
           评论内容
           <textarea
             id="comment-content"
+            rows={3}
+            placeholder="分享你的看法…"
             required
             maxLength={2000}
             value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
+            onChange={/* 同步受控评论正文。 */ (e) => setForm({ ...form, content: e.target.value })}
           />
         </label>
         <button disabled={busy}>{busy ? '提交中…' : '发表评论'}</button>

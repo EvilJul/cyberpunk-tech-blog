@@ -232,7 +232,7 @@ test('real browser management acceptance against isolated backend', { timeout: 1
     for (const label of ['GitHub 地址', '联系邮箱', '公众号名称', '微信号', '公众号二维码']) await page.getByLabel(label, { exact: true }).fill('')
     await saveSettings()
     await reader.reload()
-    for (const label of ['GitHub（未设置）', '联系邮箱（未设置）', '微信公众号（未设置）']) await expect(reader.getByRole('img', { name: label, exact: true })).toBeVisible()
+    await expect(reader.locator('.reader-contacts')).toHaveCount(0)
     await expect(reader.getByRole('button', { name: '微信公众号', exact: true })).toHaveCount(0)
     await page.getByLabel('GitHub 地址', { exact: true }).fill('javascript:alert(1)')
     await page.getByLabel('联系邮箱', { exact: true }).fill('invalid-email')

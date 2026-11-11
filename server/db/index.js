@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
 import { migrateArticleWorkspace } from './migrations/articleWorkspace.js'
 import { migrateAuthWorkspace } from './migrations/authWorkspace.js'
+import { migrateFeaturedArticles } from './migrations/featuredArticles.js'
 import { migratePublishing } from './migrations/publishing.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -28,7 +29,7 @@ db.pragma('foreign_keys = ON')
 db.pragma('journal_mode = WAL')
 db.pragma('busy_timeout = 5000')
 
-// 初始化数据库表结构
+/** 初始化基础表及幂等增量迁移。 */
 export function initDatabase() {
   logger.info('初始化数据库...')
 
@@ -212,6 +213,7 @@ export function initDatabase() {
     migrateAuthWorkspace(db)
     migrateArticleWorkspace(db)
     migratePublishing(db)
+    migrateFeaturedArticles(db)
   }).immediate()
   logger.info('数据库初始化完成')
 }

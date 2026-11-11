@@ -2,6 +2,7 @@ import express from 'express'
 import { randomUUID } from 'node:crypto'
 import db from '../db/index.js'
 import {
+  studioMediaOwner,
   createIntegration,
   createKey,
   rotateKey,
@@ -13,6 +14,10 @@ const router = express.Router()
 router.use(/* 设置请求标识并禁止缓存集成管理响应。 */ (req, res, next) => {
   req.requestId ||= randomUUID()
   res.set({ 'Cache-Control': 'no-store', 'X-Request-ID': req.requestId })
+  next()
+})
+router.use('/:integrationId', /* 屏蔽内部媒体主体的所有管理操作，包括启用和密钥生成。 */ (req, res, next) => {
+  if (req.params.integrationId === studioMediaOwner) return next(Object.assign(new Error('集成不存在'), { status: 404, code: 'NOT_FOUND' }))
   next()
 })
 /** 在事务中执行管理操作并记录审计。 */
@@ -35,11 +40,11 @@ const manage = (req, operation, fn) =>
   })()
 /** 返回带请求标识的管理数据。 */
 const send = (req, res, data) => res.json({ data, request_id: req.requestId })
-router.get('/', /* 读取集成列表。 */ (req, res) =>
+router.get('/', /* 读取外部集成列表，隐藏内部媒体主体。 */ (req, res) =>
   send(
     req,
     res,
-    db.prepare('SELECT * FROM integrations ORDER BY created_at DESC,id').all()
+    db.prepare('SELECT * FROM integrations WHERE id!=? ORDER BY created_at DESC,id').all(studioMediaOwner)
   )
 )
 router.post('/', /* 创建集成并返回结果。 */ (req, res) => {

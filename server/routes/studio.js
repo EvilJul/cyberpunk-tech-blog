@@ -6,6 +6,7 @@ import { CategoryDAO, TagDAO, CommentDAO } from '../db/otherDAO.js'
 import { requireAdminSession } from '../middleware/auth.js'
 import { requireCsrf } from '../middleware/csrf.js'
 import * as articleService from '../services/articleService.js'
+import { registerStudioMedia } from '../services/studioMediaService.js'
 import settingsRouter from './settings.js'
 import { parseStudioImage, handleStudioImage } from './upload.js'
 
@@ -93,6 +94,14 @@ router.put(
         req.principal
       )
     )
+  )
+)
+router.put(
+  '/articles/:id/pin',
+  wrap(/* 按共享版本设置首页置顶，沿用会话及CSRF防护。 */ (req, res) =>
+    articleResponse(res, articleService.setPinned(
+      req.params.id, req.body, req.get('If-Match'), req.principal
+    ))
   )
 )
 for (const action of ['publish', 'unpublish'])
@@ -268,9 +277,14 @@ router.delete(
   })
 )
 router.post('/media', parseStudioImage, handleStudioImage)
+router.post('/media/register', wrap(/* 显式登记历史图片，沿用管理员会话和CSRF。 */ async (req, res) => {
+  if (!req.body || Object.keys(req.body).length !== 1)
+    throw articleService.articleError(400, 'INVALID_MEDIA', '请仅提供 filename')
+  res.json(await registerStudioMedia(req.body.filename))
+}))
 router.get(
   '/media',
-  wrap(/* 分页列出上传目录中的媒体信息。 */ async (req, res) => {
+  wrap(/* 只读列出媒体及已有登记编号，历史文件由显式接口登记。 */ async (req, res) => {
     const dir = join(dataDir, 'uploads')
     const names = await fs.readdir(dir).catch(/* 目录不存在时返回空列表，其他读取错误继续抛出。 */ (error) => {
       if (error.code === 'ENOENT') return []
@@ -280,11 +294,12 @@ router.get(
       await Promise.all(
         names
           .filter(/* 筛选允许展示的图片文件名。 */ (name) => /^[\w.-]+\.(jpe?g|png|webp|gif)$/i.test(name))
-          .map(/* 读取普通图片文件的大小和时间。 */ async (name) => {
+          .map(/* 读取普通图片元信息并关联登记编号，排除符号链接。 */ async (name) => {
             const stat = await fs.lstat(join(dir, name))
             return stat.isFile()
               ? {
                   name,
+                  id: db.prepare('SELECT id FROM integration_media WHERE filename=?').get(name)?.id ?? null,
                   url: `/uploads/${name}`,
                   size: stat.size,
                   created_at: stat.mtimeMs

@@ -73,7 +73,14 @@
 .article-reading dialog { max-height: 90vh; max-height: 90dvh; overflow: auto; background: #1b2330; color: #e8edf4; }
 .article-reading dialog img { width: auto; height: auto; max-height: 70vh; max-height: 70dvh; max-width: 100%; object-fit: contain; }
 .article-reading dialog button { position: sticky; top: 0; background: #1b2330; min-height: 44px; }
-.article-reading .back-top { position: static; min-height: 44px; }
+/* 回顶入口固定在阅读区外侧，不再占用正文与评论之间的空间。 */
+.article-reading .back-top { position: fixed; z-index: 30; right: max(24px, env(safe-area-inset-right, 0px)); bottom: max(28px, env(safe-area-inset-bottom, 0px)); display: grid; place-items: center; width: 48px; height: 48px; margin: 0; padding: 0; border: 1px solid #9bc6ff66; border-radius: 15px; background: #1b2330; color: #c6dfff; box-shadow: 0 6px 24px #0005; transition: background .2s, transform .2s; }
+.article-reading .back-top:hover { background: #293c55; transform: translateY(-3px); }
+@media (max-width: 760px) {
+  .article-reading .back-top { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  html[data-reader-keyboard="true"] .article-reading .back-top { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .article-reading .back-top { transition: none; } }
 @media (max-width: 760px) {
   .article-reading { padding: 24px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px)); }
   .article-reading-header h1 { font-size: 28px; line-height: 1.45; }
@@ -86,4 +93,40 @@
   .article-reading .comments ul { margin-left: 0; padding-left: 8px; }
   .article-reading .comments > ul { padding-left: 0; }
   .article-reading .comment { padding: 12px; overflow-wrap: anywhere; }
+}
+
+/* 阅读操作以图形和文字共同标识，保持原有返回来源及审核流程。 */
+.article-reading .reader-return-link { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 14px; border: 1px solid #9bc6ff66; border-radius: 12px; background: #9bc6ff14; color: #c6dfff; font-weight: 600; text-decoration: none; transition: background .2s, border-color .2s; }
+.article-reading .reader-return-link:hover { background: #9bc6ff28; border-color: #9bc6ff; text-decoration: none; }
+.article-reading-nav { align-items: center; margin-bottom: 24px; }
+/* 日期、字数、时长、阅读和点赞使用同一视觉规格，交互仅由状态与焦点强调。 */
+.article-reading-meta { display: flex; align-items: center; flex-wrap: wrap; column-gap: 22px; row-gap: 0; margin: 0 0 10px; color: #a4b2c5; }
+.article-reading-header .article-meta-item { display: inline-flex; align-items: center; justify-content: flex-start; gap: 7px; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; color: inherit; font-size: 13px; font-weight: 400; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.article-reading-meta .article-meta-item svg { width: 15px; height: 15px; flex: 0 0 15px; stroke-width: 1.6; }
+.article-reading-header .article-like { cursor: pointer; transition: color .2s; }
+.article-reading-header .article-like:hover, .article-reading-header .article-like[aria-pressed="true"] { color: #c6dfff; background: transparent; opacity: 1; }
+.article-like[aria-pressed="true"] svg { fill: #9bc6ff30; }
+@media (max-width: 760px) {
+  .article-reading-meta { column-gap: 18px; }
+  .article-reading-meta .article-meta-date { flex-basis: 100%; }
+}
+.article-reading .comments { padding-top: 24px; }
+.article-reading .comments > h2 { margin: 0 0 6px; font-size: 20px; font-weight: 650; }
+.article-reading .comments > p { font-size: 13px; color: #b3bfd0; margin: 0 0 14px; }
+.article-reading .comments .comment-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 16px; margin-top: 14px; }
+.article-reading .comment-form > label { display: flex; flex-direction: column; gap: 6px; margin: 0; font-size: 13px; color: #b3bfd0; min-width: 0; }
+.article-reading .comment-form :is(input, textarea) { width: 100%; margin: 0; padding: 9px 12px; border: 1px solid #354357; border-radius: 9px; background: #1b2330; color: #e8edf4; box-sizing: border-box; }
+.article-reading .comment-form input { min-height: 42px; }
+.article-reading .comment-form textarea { min-height: 86px; resize: vertical; }
+.article-reading .comment-form-content, .article-reading .comment-form-reply { grid-column: 1 / -1; }
+.article-reading .comment-form-reply { margin: 0; font-size: 13px; }
+.article-reading .comment-form > button { grid-column: 1 / -1; justify-self: end; min-height: 44px; padding: 9px 18px; border: 1px solid #9bc6ff55; border-radius: 9px; background: #9bc6ff1c; color: #c6dfff; font-size: 14px; font-weight: 600; }
+.article-reading .comment-form > button:hover { background: #9bc6ff30; }
+.article-reading .comment-form > button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 760px) {
+  .article-reading .comments .comment-form { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .article-reading .comment-form :is(input, textarea) { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .article-reading .reader-return-link, .article-reading-header .article-like { transition: none; }
 }

@@ -45,8 +45,9 @@ export default function Sidebar({ total = 0 }) {
   }, [])
 
   return (
-    <aside className="w-full space-y-5">
-      <div className="glass-card p-6 text-center">
+    <aside className="reader-sidebar w-full space-y-5">
+      <div className="reader-profile glass-card p-6 text-center">
+        <span className="reader-profile-caption">关于作者</span>
         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gold via-gold-light to-gold-dark flex items-center justify-center mb-4 mx-auto shadow-lg shadow-gold/20 overflow-hidden">
           {settings?.avatar ? (
             <img
@@ -66,11 +67,8 @@ export default function Sidebar({ total = 0 }) {
         <p className="text-dark-400 text-sm mb-4">
           {settings?.bio || '探索技术世界，分享编程经验'}
         </p>
-        <ContactLinks settings={settings} />
-      </div>
-
-      <div className="glass-card p-5">
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <ContactLinks settings={settings} hideUnavailable />
+        <div className="reader-profile-stats grid grid-cols-3 gap-3 text-center">
           <div className="p-3 rounded-xl bg-dark-800/30">
             <div className="text-2xl font-bold text-gold">{stats.views}</div>
             <div className="text-xs text-dark-400 mt-1">访问</div>

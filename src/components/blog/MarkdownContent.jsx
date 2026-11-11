@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { ArrowUp } from 'lucide-react'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
@@ -112,7 +113,7 @@ function CodeBlock({ children }) {
     </div>
   )
 }
-/** 共享安全 Markdown 渲染，手机读者目录折叠与预览均局部管理。 */
+/** 共享安全 Markdown 渲染，局部管理目录、预览和可访问的回顶入口。 */
 export default function MarkdownContent({ content }) {
   const mobile = useMobileReader()
   const [tocOpen, setTocOpen] = useState(false)
@@ -265,6 +266,9 @@ export default function MarkdownContent({ content }) {
       </div>
       <button
         className="back-top"
+        type="button"
+        aria-label="回到顶部"
+        title="回到顶部"
         onClick={/* 回到阅读开头并尊重减少动效设置。 */ () =>
           window.scrollTo({
             top: 0,
@@ -274,7 +278,8 @@ export default function MarkdownContent({ content }) {
           })
         }
       >
-        回到顶部
+        <ArrowUp size={21} aria-hidden="true" />
+        <span className={reader ? 'sr-only' : undefined}>回到顶部</span>
       </button>
       <dialog
         ref={dialog}

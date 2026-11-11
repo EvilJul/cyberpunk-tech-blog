@@ -4,6 +4,8 @@ import React, { useState, useCallback, memo } from 'react'
 import { Calendar, ArrowRight } from 'lucide-react'
 import { logger } from '../../utils/logger'
 import { useMobileReader } from '../../utils/readerViewport'
+import ArticleCover from './ArticleCover'
+import { plainExcerpt, articleDate } from '../../utils/articlePresentation'
 import './article-card.css'
 
 /** 高亮纯文本中的搜索词，不插入 HTML。 */
@@ -41,20 +43,6 @@ function getSnippet(text, query, contextLen = 12) {
   if (start > 0) snippet = '...' + snippet
   if (end < text.length) snippet = snippet + '...'
   return snippet
-}
-
-/** 仅清理列表展示的 Markdown 图片、链接及格式，不修改保存内容。 */
-function plainExcerpt(value) {
-  return String(value || '')
-    .replace(/^\s*\[[^\]]+\]:\s*\S+.*$/gm, '')
-    .replace(/!?\[([^\]]*)\]\((?:[^()\n]|\([^()]*\))*\)/g, '$1')
-    .replace(/!?\[([^\]]*)\]\[[^\]]*\]/g, '$1')
-    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1')
-    .replace(/<[^>]*>/g, '')
-    .replace(/(?:^|\n)\s{0,3}(?:#{1,6}\s+|>\s*|[-+*]\s+)/g, ' ')
-    .replace(/[*_~`]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 /** 展示文章摘要与独立操作，并在普通打开时记录列表返回位置。 */
@@ -112,49 +100,54 @@ const ArticleCard = memo(function ArticleCard({ article, searchQuery }) {
 
   return (
     <article className="article-card glass-card glass-card-hover p-5 cursor-pointer group relative overflow-hidden">
-      <div className="article-card-meta flex items-center gap-2 text-xs text-dark-400 mb-3">
-        <Calendar size={12} />
-        <time dateTime={publishDate}>{publishDate}</time>
-        <Link
-          to={`/category/${encodeURIComponent(article.category || '未分类')}`}
-        >
-          {article.category}
-        </Link>
-      </div>
+      <div className="article-card-body">
+        <div className="article-card-copy">
+          <div className="article-card-meta flex items-center gap-2 text-xs text-dark-400 mb-3">
+            <Calendar size={12} />
+            <time dateTime={publishDate}>{articleDate(publishDate)}</time>
+            <Link
+              to={`/category/${encodeURIComponent(article.category || '未分类')}`}
+            >
+              {article.category}
+            </Link>
+          </div>
 
-      <h2 className="text-lg font-bold mb-2 text-white group-hover:text-gold transition-colors">
-        <Link
-          className="article-card-link"
-          to={articleUrl}
-          onClick={openArticle}
-        >
-          <span className="article-card-title line-clamp-1">
+          <h2 className="text-lg font-bold mb-2 text-white group-hover:text-gold transition-colors">
+            <Link
+              className="article-card-link"
+              to={articleUrl}
+              onClick={openArticle}
+            >
+              <span className="article-card-title line-clamp-1">
+                {searchQuery
+                  ? highlightText(article.title, searchQuery)
+                  : article.title}
+              </span>
+            </Link>
+          </h2>
+
+          {excerpt && <p className="article-card-excerpt text-dark-400 text-sm mb-3 line-clamp-2 leading-relaxed">
             {searchQuery
-              ? highlightText(article.title, searchQuery)
-              : article.title}
-          </span>
-        </Link>
-      </h2>
+              ? highlightText(excerpt, searchQuery)
+              : excerpt}
+          </p>}
 
-      {excerpt && <p className="article-card-excerpt text-dark-400 text-sm mb-3 line-clamp-2 leading-relaxed">
-        {searchQuery
-          ? highlightText(excerpt, searchQuery)
-          : excerpt}
-      </p>}
+          {contentSnippet && (
+            <div className="article-card-snippet mb-3 px-3 py-2 bg-dark-800/50 rounded-lg border-l-2 border-gold/50">
+              <p className="text-dark-300 text-xs leading-relaxed">
+                {highlightText(contentSnippet, searchQuery)}
+              </p>
+            </div>
+          )}
 
-      {contentSnippet && (
-        <div className="article-card-snippet mb-3 px-3 py-2 bg-dark-800/50 rounded-lg border-l-2 border-gold/50">
-          <p className="text-dark-300 text-xs leading-relaxed">
-            {highlightText(contentSnippet, searchQuery)}
-          </p>
+          {readingMinutes !== null && (
+            <p className="article-card-reading-time text-sm">
+              {wordCount !== null && `${wordCount} 字 · `}约 {readingMinutes} 分钟
+            </p>
+          )}
         </div>
-      )}
-
-      {readingMinutes !== null && (
-        <p className="article-card-reading-time text-sm">
-          {wordCount !== null && `${wordCount} 字 · `}约 {readingMinutes} 分钟
-        </p>
-      )}
+        <ArticleCover src={article.cover_image} />
+      </div>
       <div className="article-card-footer flex items-center justify-between">
         <div className="article-card-tags flex flex-wrap gap-1.5">
           {(article.tags || []).slice(0, mobile ? 2 : 3).map(/* 标签保留独立分类导航。 */ (tag) => (

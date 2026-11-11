@@ -18,3 +18,17 @@
   .article-card-stats .article-card-read-cue { display: none; }
   .article-card :is(a, button):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 }
+
+/* 封面与摘要并排，图片失败后自然退回完整文字宽度。 */
+.article-card-body { display: flex; align-items: center; gap: 24px; margin-bottom: 14px; }
+.article-card-copy { flex: 1; min-width: 0; }
+.article-cover { display: block; object-fit: cover; background: var(--theme-surface); }
+.article-card-body > .article-cover { width: clamp(150px, 26%, 210px); height: 132px; border-radius: 12px; flex-shrink: 0; }
+.article-card-reading-time { color: var(--theme-text-secondary); font-size: 12px; }
+.article-card .article-card-title { -webkit-line-clamp: 2; }
+.article-card-footer { gap: 12px; }
+@media (max-width: 760px) {
+  .article-card-body { gap: 12px; align-items: flex-start; }
+  .article-card-body > .article-cover { width: 88px; height: 88px; border-radius: 10px; }
+  .article-card-copy h2 { font-size: 18px; }
+}

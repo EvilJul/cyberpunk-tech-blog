@@ -17,6 +17,14 @@ export class StatsDAO {
     `).get(id)
   }
 
+  /** 汇总当前公开文章的点赞与数量，避免管理员身份将草稿统计暴露给读者页面。 */
+  static summary() {
+    const totals = db.prepare(`SELECT COUNT(a.id) AS articles, COALESCE(SUM(s.likes), 0) AS likes
+      FROM articles a LEFT JOIN article_stats s ON s.article_id = a.id
+      WHERE a.status = 'published'`).get()
+    return { views: this.siteViews(), ...totals }
+  }
+
   static siteViews() {
     return db.prepare('SELECT views FROM site_stats WHERE id = 1').get().views
   }

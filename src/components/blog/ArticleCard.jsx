@@ -1,3 +1,4 @@
+import { notifyStatsChanged } from '../../utils/readerStats'
 import { apiFetch } from '../../utils/api'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import React, { useState, useCallback, memo } from 'react'
@@ -75,6 +76,7 @@ const ArticleCard = memo(function ArticleCard({ article, searchQuery }) {
           const data = await res.json()
           setLikes(data.likes)
           setIsLiked(true)
+          notifyStatsChanged()
         } catch (err) {
           logger.error('点赞失败', { error: err.message })
         }

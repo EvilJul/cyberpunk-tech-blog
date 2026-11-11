@@ -165,11 +165,6 @@ export default function ArticleList({ onArticleClick, perPage = 10, onTotal, fil
   const stale = loading || error || result?.query !== query || result?.page !== page
   return (
     <div className={`reader-article-list${home ? ' reader-article-list--home' : ''}`} data-initial-scroll-top={initialScrollTop} data-list-ready={!loading && !error}>
-      {syncUrl && location.pathname === '/' && <header className="home-intro">
-        <span className="home-eyebrow"><span />探索 · 构建 · 分享</span>
-        <h1>让想法，<em>不止于想象。</em></h1>
-        <p>记录技术探索与实践，把每一次尝试写成有用的经验。</p>
-      </header>}
       <SearchBar query={draft} onSearch={setDraft} onComposingChange={setComposing} autoFocus={autoFocusSearch} focusRequest={syncUrl && params.get('focus') === 'search'} />
       {home && <FeaturedArticles />}
       {home && !isMobile && <div className="home-section-heading"><h2>最近的记录<span> / 技术手记</span></h2><Link to="/explore">探索全部文章 ↗</Link></div>}

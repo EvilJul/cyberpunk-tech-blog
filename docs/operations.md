@@ -85,6 +85,14 @@ BLOG_DATA_DIR=/absolute/path/disposable-data node scripts/migrate-stats.js
 
 成功后仅 SQLite 作为在线统计来源，保留 JSON 作审计与回滚材料。若新版本异常，停止所有写入，使用同一时点应用版本及完整备份恢复；如需保留升级后的统计，先由数据模块导出旧版兼容 JSON 并核对再降级。禁止在生产在线库上试验降级或让旧 JSON 和 SQLite 同时计数。
 
+## 读者统计口径与更新保留
+
+首页通过 `GET /api/stats/summary` 读取站点累计访问、当前公开文章数量及点赞合计。访问指读者页面浏览次数（PV），不是独立访客数：进入首页或切换到另一读者路径增加一次，刷新增加一次；搜索参数变化、弹层、组件重渲染、工作台和登录页不增加。手机即使不展示侧栏也记录访问。文章阅读量由文章详情单独记录，不等于站点访问量。统计响应禁止缓存；获取失败显示不可用状态，不显示假零。
+
+点赞仍按“文章 + 服务端来源哈希”去重，同一 IP 对同一文章重复点击不会增加；重启后去重记录保留。反向代理部署需配置精确的 `TRUST_PROXY`，否则所有访客可能被识别为代理的同一来源；不要信任任意转发头。生产的 `JWT_SECRET`（或显式 `STATS_SOURCE_SALT`）应保持稳定，换盐不会清空已有点赞，但会改变来源去重结果。首页点赞合计只包含公开文章，撤回后不再计入合计，重新发布会恢复；删除文章会级联删除该文章的阅读、点赞和去重记录。
+
+这两项数据存于同一个 `BLOG_DATA_DIR/blog.db`：`site_stats` 保存访问，`article_stats` 保存文章统计，`article_likes` 保存点赞去重。初始化使用 `CREATE TABLE IF NOT EXISTS` 和 `INSERT OR IGNORE`，不会覆盖已有计数；保存草稿、重新发布和普通服务重启不会重置。`deploy.sh` 排除 `server/data`，新版本链接到同一个 `shared/data`；Compose 使用 `blog-data` 命名卷。因此更新前后必须核对实际数据目录仍相同，不能删除卷（如 `docker compose down -v`）、切换空目录或用旧数据库覆盖。普通构建不写数据库。更新前做 SQLite 在线备份，更新后核对 `/api/stats/summary` 和 `/api/stats/all`；旧 `stats.json` 按上一节显式迁移，不能用零值判断历史数据已丢失，也不能自动覆盖现有统计。
+
 ## 作者会话与发布开关
 
 `SESSION_COOKIE_SECURE` 在镜像和 Compose 默认 true；生产必须使用 HTTPS。复制环境模板在本地 HTTP 验收时设 false，生产部署必须改回 true。Cookie 为 HttpOnly、SameSite=Lax、无 Domain，Path 为部署前缀，默认空闲12小时、绝对7天。仅填精确可信代理；不要为修复登录而放宽信任。会话/身份响应 no-store，工作区不进入 sitemap。跨源管理写请求必须拒绝，multipart 同样要求 CSRF。

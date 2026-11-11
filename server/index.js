@@ -13,6 +13,7 @@ import setupRouter from './routes/setup.js'
 import studioRouter from './routes/studio.js'
 import integrationsRouter from './routes/integrations.js'
 import publishingRouter from './routes/publishing.js'
+import { getOverview } from './services/overviewService.js'
 import { cleanupPublishing } from './services/mediaService.js'
 import db, { initDatabase } from './db/index.js'
 import discoveryRouter, { injectMetadata } from './routes/discovery.js'
@@ -213,25 +214,9 @@ if (fs.existsSync(distDir)) {
 app.use('/api/session/login', loginIpLimiter, authLimiter)
 app.use('/api/session', sessionRouter)
 app.use('/api/setup', setupRouter)
-app.get('/api/studio/overview', requireAdminSession, /* 汇总管理员可见的文章、分类标签和访问统计。 */ (req, res) =>
-  res.json({
-    articles: db.prepare('SELECT COUNT(*) AS count FROM articles').get().count,
-    published: db
-      .prepare(
-        "SELECT COUNT(*) AS count FROM articles WHERE status='published'"
-      )
-      .get().count,
-    drafts: db
-      .prepare(
-        "SELECT COUNT(*) AS count FROM articles WHERE status!='published'"
-      )
-      .get().count,
-    categories: db.prepare('SELECT COUNT(*) AS count FROM categories').get()
-      .count,
-    tags: db.prepare('SELECT COUNT(*) AS count FROM tags').get().count,
-    views: db.prepare('SELECT views FROM site_stats WHERE id=1').get().views
-  })
-)
+app.get('/api/studio/overview', requireAdminSession, /* 汇总管理员可见的累计指标与近十四天文章活动。 */ (req, res) => {
+  res.set('Cache-Control', 'no-store').json(getOverview(db))
+})
 app.get('/api/studio/capabilities', requireAdminSession, /* 返回工作台可用的发布集成能力开关。 */ (req, res) =>
   res.json({ publishingEnabled: process.env.PUBLISHING_API_ENABLED === 'true' })
 )

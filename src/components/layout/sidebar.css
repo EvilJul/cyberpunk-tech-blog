@@ -1,0 +1,16 @@
+/* 目录头整行可点击，两个分组各自保留展开状态。 */
+.reader-sidebar-section h3 { margin: 0; }
+.reader-sidebar-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--theme-text, #fff); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.reader-sidebar-toggle > svg { flex: none; }
+.reader-sidebar-toggle > span { flex: 1; }
+.reader-sidebar-toggle:hover { color: var(--theme-primary, #818cf8); }
+.reader-sidebar-toggle:focus-visible { outline: 2px solid var(--theme-primary, #818cf8); outline-offset: 5px; border-radius: 4px; }
+.reader-sidebar-chevron { color: var(--theme-text-secondary, #94a3b8); transition: transform 260ms cubic-bezier(.22, 1, .36, 1); }
+.reader-sidebar-section[data-expanded='false'] .reader-sidebar-chevron { transform: rotate(-90deg); }
+.reader-sidebar-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 260ms cubic-bezier(.22, 1, .36, 1), opacity 200ms; }
+.reader-sidebar-collapse-inner { overflow: hidden; min-height: 0; }
+.reader-sidebar-collapse-inner > div { padding-top: 12px; }
+.reader-sidebar-section[data-expanded='false'] .reader-sidebar-collapse { grid-template-rows: 0fr; opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .reader-sidebar-chevron, .reader-sidebar-collapse { transition: none; }
+}

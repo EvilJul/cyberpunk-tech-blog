@@ -1,5 +1,6 @@
 import { Home, FolderOpen, UserRound, Search, LogIn, PenLine, LayoutDashboard, MoreHorizontal } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useReaderVisit } from './utils/readerStats'
 import { apiFetch } from './utils/api'
 import React, { useEffect, useState, useRef, useMemo, lazy, Suspense } from 'react'
 import {
@@ -60,12 +61,13 @@ const IntegrationsPage = lazy(
   /* 按需加载集成管理页面。 */ () => import('./components/studio/IntegrationsPage')
 )
 
-/** 渲染读者布局，文章页停用装饰特效并保留原地搜索体验。 */
+/** 渲染读者布局；首页引言与导航共用独立左栏，文章页保留原地搜索体验。 */
 function Layout() {
   const { user } = useAuth()
   const { settings } = useSettings()
   const { theme } = useTheme()
   const location = useLocation()
+  useReaderVisit(location.pathname)
   const paletteKey = JSON.stringify(theme?.colors || {})
   const palette = useMemo(/* 仅配色变化时计算局部可读色，搜索与弹层状态不重建颜色解析画布。 */ () => readerPalette(theme), [paletteKey])
   const navigate = useNavigate()
@@ -118,7 +120,7 @@ function Layout() {
   const isReading = location.pathname.startsWith('/article/')
   const effects = theme?.effects || {}
   return (
-    <div className={`reader-shell${isReading ? ' reader-shell--reading' : ''}`} style={palette}>
+    <div className={`reader-shell${isReading ? ' reader-shell--reading' : ''}${location.pathname === '/' ? ' reader-shell--home' : ''}`} style={palette}>
       <ReaderScrollMemory />
       {!mobile && !reducedMotion && !isReading && (
         <div aria-hidden="true" data-reader-effects>
@@ -130,10 +132,13 @@ function Layout() {
       <a href="#main" className="skip-link">
         跳到正文
       </a>
-      {!mobile && <aside className="reader-dock" aria-label="站点导航">
-        <Link className="dock-brand" to="/" aria-label={settings.title + ' · 首页'} title={settings.title}>
-          {settings.title?.slice(0, 1) || 'B'}
-        </Link>
+      {!mobile && <div className={location.pathname === '/' ? 'reader-home-rail' : 'reader-desktop-rail'}>
+      {location.pathname === '/' && <header className="home-intro">
+        <span className="home-eyebrow"><span />探索 · 构建 · 分享</span>
+        <h1><span>让想法，</span><em>不止于想象。</em></h1>
+        <p className="sr-only">记录技术探索与实践，把每一次尝试写成有用的经验。</p>
+      </header>}
+      <aside className="reader-dock" aria-label="站点导航">
         <nav aria-label="主导航">
           {[
             ['/', '首页', Home],
@@ -176,7 +181,8 @@ function Layout() {
             )
           )}
         </div>
-      </aside>}
+      </aside>
+      </div>}
       {mobile && <nav className="reader-mobile-nav" aria-label="手机导航">
         <NavLink end to="/"><Home aria-hidden="true" size={21} /><span>首页</span></NavLink>
         <NavLink to="/explore" className={/^\/(category|tag)\//.test(location.pathname) ? 'active' : undefined}><FolderOpen aria-hidden="true" size={21} /><span>探索</span></NavLink>
@@ -268,20 +274,20 @@ function ReaderSearch({ onClose, initial = {} }) {
     <ArticleList showCategories={false} filterCategory="" filterTag="" autoFocusSearch syncUrl={false} initialQuery={initial.query || ''} initialPage={initial.page || 1} onStateChange={/* 结果状态仅保存在面板，不污染原文章地址。 */ (state) => { stateRef.current = state }} />
   </ReaderDialog>
 }
-/** 组合文章列表与站点侧栏。 */
+/** 组合文章主栏与紧凑侧栏，优先分配首页正文宽度。 */
 function Listing({ mobile }) {
   const { settings } = useSettings()
   const [total, setTotal] = useState(0)
   return (
     <div
-      className={`flex flex-col lg:flex-row gap-8 ${settings.sidebar === 'left' ? 'lg:flex-row-reverse' : ''}`}
+      className={`reader-home-layout flex flex-col lg:flex-row gap-8 ${settings.sidebar === 'left' ? 'lg:flex-row-reverse' : ''}`}
     >
       <div className="flex-1 min-w-0">
         {mobile && <ReaderIdentity settings={settings} home />}
         <ArticleList perPage={settings.perpage} onTotal={setTotal} />
       </div>
       {!mobile && settings.sidebar !== 'hidden' && (
-        <div className="w-full lg:w-80">
+        <div className="reader-home-sidebar w-full lg:w-80">
           <Sidebar total={total} />
         </div>
       )}

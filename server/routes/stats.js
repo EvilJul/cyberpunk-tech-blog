@@ -15,6 +15,11 @@ const writes = rateLimit({
   message: { error: '统计请求过于频繁' }
 })
 router.use(optionalAuth)
+router.use(/* 统计读写响应都禁止缓存，防止 CDN 或浏览器展示旧计数。 */ (req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+})
+router.get('/summary', /* 仅汇总公开文章，任何会话身份都使用相同读者口径。 */ (req, res) => res.json(StatsDAO.summary()))
 router.get('/views', (req, res) => res.json({ views: StatsDAO.siteViews() }))
 router.post('/views', writes, (req, res) => res.json({ views: StatsDAO.incrementSiteViews() }))
 for (const field of ['views', 'likes']) {

@@ -1,4 +1,5 @@
 import { useAuth } from '../../contexts/AuthContext'
+import { notifyStatsChanged } from '../../utils/readerStats'
 import { apiFetch } from '../../utils/api'
 import React, { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -83,6 +84,7 @@ export default function ArticleDetail() {
       const data = await r.json()
       setArticle(/* 仅更新当前文章的点赞数。 */ (a) => ({ ...a, likes: data.likes }))
       setLiked(true)
+      notifyStatsChanged()
     } catch (e) {
       setError(e.message)
     }

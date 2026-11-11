@@ -1,47 +1,90 @@
+import { STATS_CHANGED } from '../../utils/readerStats'
 import { apiFetch } from '../../utils/api'
 import { Link } from 'react-router-dom'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useId } from 'react'
 import { useSettings } from '../../contexts/SettingsContext'
 import ContactLinks from './ContactLinks'
-import { Tag, Folder } from 'lucide-react'
+import './sidebar.css'
+import { Tag, Folder, ChevronDown } from 'lucide-react'
+
+/** 为侧栏目录提供独立折叠与键盘开关，收起时禁止焦点进入隐藏链接。 */
+function SidebarSection({ title, icon: Icon, children }) {
+  const [open, setOpen] = useState(true)
+  const id = useId()
+  return (
+    <section className="reader-sidebar-section glass-card p-5" data-expanded={open}>
+      <h3>
+        <button type="button" className="reader-sidebar-toggle" aria-expanded={open} aria-controls={id}
+          onClick={/* 仅切换当前目录，不影响另一目录的状态。 */ () => setOpen(/* 反转当前目录的展开状态。 */ current => !current)}>
+          <Icon size={16} className="text-gold" aria-hidden="true" />
+          <span>{title}</span>
+          <ChevronDown size={16} className="reader-sidebar-chevron" aria-hidden="true" />
+        </button>
+      </h3>
+      <div id={id} className="reader-sidebar-collapse" aria-hidden={!open} inert={!open}>
+        <div className="reader-sidebar-collapse-inner">{children}</div>
+      </div>
+    </section>
+  )
+}
 
 /** 展示作者资料、按配置点亮的联系账号及内容目录。 */
 export default function Sidebar({ total = 0 }) {
   const [stats, setStats] = useState({
-    views: 0,
-    likesCount: 0,
-    articleCount: 0
+    views: null,
+    likesCount: null
   })
+  const [statsError, setStatsError] = useState(false)
   const [categories, setCategories] = useState([])
   const [tags, setTags] = useState([])
   const { settings } = useSettings()
 
-  useEffect(() => {
-    apiFetch('/api/stats/views')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then((data) => setStats((prev) => ({ ...prev, views: data.views })))
-      .catch(() => {})
+  useEffect(/* 挂载、访问记录或点赞成功后重新读取真实汇总，失败时不伪装成零。 */ () => {
+    let active = true
+    let sequence = 0
+    /** 用递增请求序号阻止慢响应覆盖较新的计数。 */
+    async function refreshStats() {
+      const request = ++sequence
+      try {
+        const response = await apiFetch('/api/stats/summary', { cache: 'no-store' })
+        if (!response.ok) throw new Error('统计暂不可用')
+        const data = await response.json()
+        if (active && request === sequence) {
+          setStats({ views: data.views, likesCount: data.likes })
+          setStatsError(false)
+        }
+      } catch {
+        if (active && request === sequence) setStatsError(true)
+      }
+    }
+    refreshStats()
+    window.addEventListener(STATS_CHANGED, refreshStats)
+    window.addEventListener('focus', refreshStats)
+    return /* 卸载后停止回填并移除刷新监听。 */ () => {
+      active = false
+      window.removeEventListener(STATS_CHANGED, refreshStats)
+      window.removeEventListener('focus', refreshStats)
+    }
+  }, [])
 
+  useEffect(/* 加载分类与标签目录。 */ () => {
     apiFetch('/api/categories')
-      .then((res) => res.json())
-      .then((data) =>
+      .then(/* 读取目录接口响应。 */ (res) => res.json())
+      .then(/* 更新目录数据。 */ (data) =>
         setCategories(Array.isArray(data) ? data : data.categories || [])
       )
-      .catch(() => {})
+      .catch(/* 目录失败时保留当前条目。 */ () => {})
 
     apiFetch('/api/tags')
-      .then((res) => {
+      .then(/* 读取目录接口响应。 */ (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
-      .then((data) => {
+      .then(/* 更新目录数据。 */ (data) => {
         const tagList = Array.isArray(data) ? data : data.tags || []
-        setTags(tagList.map((t) => t.name))
+        setTags(tagList.map(/* 提取标签名称。 */ (t) => t.name))
       })
-      .catch(() => {})
+      .catch(/* 目录失败时保留当前条目。 */ () => {})
   }, [])
 
   return (
@@ -70,7 +113,7 @@ export default function Sidebar({ total = 0 }) {
         <ContactLinks settings={settings} hideUnavailable />
         <div className="reader-profile-stats grid grid-cols-3 gap-3 text-center">
           <div className="p-3 rounded-xl bg-dark-800/30">
-            <div className="text-2xl font-bold text-gold">{stats.views}</div>
+            <div className="text-2xl font-bold text-gold">{statsError ? '—' : stats.views ?? '—'}</div>
             <div className="text-xs text-dark-400 mt-1">访问</div>
           </div>
           <div className="p-3 rounded-xl bg-dark-800/30">
@@ -79,21 +122,18 @@ export default function Sidebar({ total = 0 }) {
           </div>
           <div className="p-3 rounded-xl bg-dark-800/30">
             <div className="text-2xl font-bold text-gold">
-              {stats.likesCount}
+              {statsError ? '—' : stats.likesCount ?? '—'}
             </div>
             <div className="text-xs text-dark-400 mt-1">点赞</div>
           </div>
         </div>
+        {statsError && <small role="status" className="text-dark-400">统计暂不可用，请稍后重试</small>}
       </div>
 
       {categories.length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="flex items-center gap-2 text-white font-bold mb-3">
-            <Folder size={16} className="text-gold" />
-            <span>分类</span>
-          </h3>
+        <SidebarSection title="分类" icon={Folder}>
           <div className="space-y-1">
-            {categories.map((cat) => (
+            {categories.map(/* 渲染分类链接及公开文章数。 */ (cat) => (
               <Link
                 to={`/category/${encodeURIComponent(cat.name)}`}
                 key={cat.id || cat.slug || cat.name}
@@ -106,17 +146,13 @@ export default function Sidebar({ total = 0 }) {
               </Link>
             ))}
           </div>
-        </div>
+        </SidebarSection>
       )}
 
       {tags.length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="flex items-center gap-2 text-white font-bold mb-3">
-            <Tag size={16} className="text-gold" />
-            <span>标签</span>
-          </h3>
+        <SidebarSection title="标签" icon={Tag}>
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
+            {tags.map(/* 渲染标签筛选链接。 */ (tag) => (
               <Link
                 to={`/tag/${encodeURIComponent(tag)}`}
                 key={tag.id || tag.slug || tag}
@@ -126,7 +162,7 @@ export default function Sidebar({ total = 0 }) {
               </Link>
             ))}
           </div>
-        </div>
+        </SidebarSection>
       )}
     </aside>
   )

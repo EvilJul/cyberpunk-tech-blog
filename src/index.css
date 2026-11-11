@@ -324,6 +324,19 @@ body::after {
   color: var(--theme-text-primary);
   border-color: var(--theme-border);
 }
+/* 桌面列表与侧栏透出站点背景，保留主题色与文字本身的不透明度。 */
+@media (min-width: 761px) {
+  .reader-main .reader-article-list .article-card,
+  .reader-main:not(.reader-main--article) aside > .glass-card {
+    background: color-mix(in srgb, var(--theme-surface) 65%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .reader-main:not(.reader-main--article) aside > .glass-card {
+    background: color-mix(in srgb, var(--theme-surface) 70%, transparent);
+  }
+}
 /* 桌面侧边悬浮导航让出页面顶部，窄屏改为底部触达。 */
 .reader-dock {
   position: fixed;

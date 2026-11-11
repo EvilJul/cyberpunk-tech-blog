@@ -65,6 +65,7 @@ QUICKSTART.md
 plugins/
 
 # Local agent tooling
+.agents/
 .claude/
 .codex/
 .codegraph/
